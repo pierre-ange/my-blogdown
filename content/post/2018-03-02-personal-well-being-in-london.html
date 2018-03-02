@@ -1,0 +1,228 @@
+---
+title: Mapping personal well-being data in London
+author: Pierre-Ange Oliva
+date: '2018-03-02'
+slug: personal-well-being-in-london
+comments: false
+categories: [R]
+tags: [London, R]
+large_thumb: true
+draft: false
+output:
+  blogdown::html_page:
+    dev: 'png'
+    highlight: tango
+    css: "../../css/custom.css"
+---
+
+<style type="text/css">
+div.sourceCode { overflow-x: auto; }
+table.sourceCode, tr.sourceCode, td.lineNumbers, td.sourceCode {
+  margin: 0; padding: 0; vertical-align: baseline; border: none; }
+table.sourceCode { width: 100%; line-height: 100%; background-color: #f8f8f8; }
+td.lineNumbers { text-align: right; padding-right: 4px; padding-left: 4px; color: #aaaaaa; border-right: 1px solid #aaaaaa; }
+td.sourceCode { padding-left: 5px; }
+pre, code { background-color: #f8f8f8; }
+code > span.kw { color: #204a87; font-weight: bold; } /* Keyword */
+code > span.dt { color: #204a87; } /* DataType */
+code > span.dv { color: #0000cf; } /* DecVal */
+code > span.bn { color: #0000cf; } /* BaseN */
+code > span.fl { color: #0000cf; } /* Float */
+code > span.ch { color: #4e9a06; } /* Char */
+code > span.st { color: #4e9a06; } /* String */
+code > span.co { color: #8f5902; font-style: italic; } /* Comment */
+code > span.ot { color: #8f5902; } /* Other */
+code > span.al { color: #ef2929; } /* Alert */
+code > span.fu { color: #000000; } /* Function */
+code > span.er { color: #a40000; font-weight: bold; } /* Error */
+code > span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
+code > span.cn { color: #000000; } /* Constant */
+code > span.sc { color: #000000; } /* SpecialChar */
+code > span.vs { color: #4e9a06; } /* VerbatimString */
+code > span.ss { color: #4e9a06; } /* SpecialString */
+code > span.im { } /* Import */
+code > span.va { color: #000000; } /* Variable */
+code > span.cf { color: #204a87; font-weight: bold; } /* ControlFlow */
+code > span.op { color: #ce5c00; font-weight: bold; } /* Operator */
+code > span.pp { color: #8f5902; font-style: italic; } /* Preprocessor */
+code > span.ex { } /* Extension */
+code > span.at { color: #c4a000; } /* Attribute */
+code > span.do { color: #8f5902; font-weight: bold; font-style: italic; } /* Documentation */
+code > span.an { color: #8f5902; font-weight: bold; font-style: italic; } /* Annotation */
+code > span.cv { color: #8f5902; font-weight: bold; font-style: italic; } /* CommentVar */
+code > span.in { color: #8f5902; font-weight: bold; font-style: italic; } /* Information */
+</style>
+  <link rel="stylesheet" href="../../css/custom.css" type="text/css" />
+
+
+<div id="dataset" class="section level2">
+<h2>Dataset</h2>
+<div id="well-being-study" class="section level3">
+<h3>Well-being study</h3>
+<p>A cool thing about London (among others) is that more and more data about the capital is made openly available, in particular through the <a href="https://data.london.gov.uk/">London Datastore</a> website.</p>
+<p>A few days ago, a dataset was updated with 2017 data: <a href="https://data.london.gov.uk/dataset/subjective-personal-well-being-borough">the personal well-being by borough</a>. The complete methodology can be found <a href="https://www.ons.gov.uk/peoplepopulationandcommunity/wellbeing/methodologies/personalwellbeingsurveyuserguide">here</a>, but in a nutshell people were asked to answer four questions on a scale of 0 to 10, where 0 is <em>not at all</em> and 10 is <em>completely</em>:</p>
+<ul>
+<li>Overall, how satisfied are you with your life nowadays?</li>
+<li>Overall, to what extent do you feel the things you do in your life are worthwhile?</li>
+<li>Overall, how happy did you feel yesterday?</li>
+<li>Overall, how anxious did you feel yesterday?</li>
+</ul>
+<p>Average scores per borough were published on the ONS website and on the London Datastore. I used the dataset from the latter, because it was already nicely formatted and London-centric. One thing though, I could not find confidence intervals for this dataset, but I am certain that they are available somewhere on the ONS website. I will then assume that the statistical uncertainties in the numbers are small enough and that an inter-borough comparison is sensible …</p>
+<p>This being said, let’s download the data.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Download the data</span>
+url &lt;-<span class="st"> &quot;https://files.datapress.com/london/dataset/subjective-personal-well-being-borough/2018-02-21T17:26:22.12/personal-well-being-borough.xls&quot;</span>
+path &lt;-<span class="st"> &quot;~/Dev/R/london-wellbeing/wellbeing.xls&quot;</span>
+httr<span class="op">::</span><span class="kw">GET</span>(url, httr<span class="op">::</span><span class="kw">write_disk</span>(path, <span class="dt">overwrite=</span><span class="ot">TRUE</span>))</code></pre></div>
+<p>Thanks to the <code>tidyverse</code> and the <code>readxl</code> packages, the Excel spreadsheet can be opened, read and converted into a data frame.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(tidyverse)
+
+<span class="co"># Function to read ranges corresponding to each question inside the Excel doc</span>
+read_range &lt;-<span class="st"> </span><span class="cf">function</span>(range, range_name){ 
+  readxl<span class="op">::</span><span class="kw">read_excel</span>(path, <span class="dt">sheet =</span> <span class="st">&quot;Summary - Mean Scores&quot;</span>, <span class="dt">range =</span> range) <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">    </span><span class="kw">na.omit</span>() <span class="op">%&gt;%</span><span class="st"> </span><span class="co"># Remove empty Excel rows</span>
+<span class="st">    </span><span class="kw">mutate_all</span>(as.numeric) <span class="op">%&gt;%</span>
+<span class="st">    </span><span class="kw">bind_cols</span>(areas) <span class="op">%&gt;%</span>
+<span class="st">    </span><span class="kw">gather</span>(Year, Value, <span class="op">-</span>Code, <span class="op">-</span>Area, <span class="dt">factor_key =</span> <span class="ot">TRUE</span>) <span class="op">%&gt;%</span>
+<span class="st">    </span><span class="kw">mutate</span>(<span class="dt">Measure =</span> range_name) <span class="op">%&gt;%</span>
+<span class="st">    </span><span class="co"># Add exact question</span>
+<span class="st">    </span><span class="kw">mutate</span>(<span class="dt">Question =</span> 
+             <span class="kw">case_when</span>(
+               Measure <span class="op">==</span><span class="st"> &#39;Happiness&#39;</span> <span class="op">~</span><span class="st"> &#39;How happy did you feel yesterday?&#39;</span>,
+               Measure <span class="op">==</span><span class="st"> &#39;Worthwile&#39;</span> <span class="op">~</span><span class="st"> &#39;To what extent do you feel the things you do in your life are worthwhile?&#39;</span>,
+               Measure <span class="op">==</span><span class="st"> &#39;Satisfaction&#39;</span> <span class="op">~</span><span class="st"> &#39;How satisfied are you with your life nowadays?&#39;</span>,
+               Measure <span class="op">==</span><span class="st"> &#39;Anxiety&#39;</span> <span class="op">~</span><span class="st"> &#39;How anxious did you feel yesterday?&#39;</span>
+             ))
+}
+
+<span class="co"># Data as a long data frame</span>
+areas &lt;-<span class="st"> </span>readxl<span class="op">::</span><span class="kw">read_excel</span>(path, <span class="dt">sheet =</span> <span class="st">&quot;Summary - Mean Scores&quot;</span>, <span class="dt">range =</span> <span class="st">&quot;A2:B53&quot;</span>) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">na.omit</span>()
+ranges &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Satisfaction&quot;</span>=<span class="st">&quot;C2:H53&quot;</span>, <span class="st">&quot;Worthwile&quot;</span>=<span class="st">&quot;J2:O53&quot;</span>, <span class="st">&quot;Happiness&quot;</span>=<span class="st">&quot;Q2:V53&quot;</span>, <span class="st">&quot;Anxiety&quot;</span>=<span class="st">&quot;X2:AC53&quot;</span>) 
+data &lt;-<span class="st"> </span>ranges <span class="op">%&gt;%</span><span class="st"> </span>purrr<span class="op">::</span><span class="kw">map2_df</span>(<span class="kw">names</span>(.), read_range)</code></pre></div>
+<p>Before going further: we reverse the <em>anxiety</em> scores to have a colour mapping in line with the other questions, i.e. the closer to 10 the better. Hence, on the plot, a large score on the anxiety question is synonym of a relative serenity in the borough.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Reverse anxiety scores (0=very anxious, 10=not at all) to be in line with other questions</span>
+data[data<span class="op">$</span>Measure <span class="op">==</span><span class="st"> &#39;Anxiety&#39;</span>, <span class="st">&#39;Value&#39;</span>] &lt;-<span class="st"> </span><span class="dv">10</span> <span class="op">-</span><span class="st"> </span>data[data<span class="op">$</span>Measure <span class="op">==</span><span class="st"> &#39;Anxiety&#39;</span>, <span class="st">&#39;Value&#39;</span>]
+
+<span class="co"># Amend the Measure label</span>
+data[data<span class="op">$</span>Measure <span class="op">==</span><span class="st"> &#39;Anxiety&#39;</span>, <span class="st">&#39;Measure&#39;</span>] &lt;-<span class="st"> &#39;Anxiety (reversed)&#39;</span>
+
+<span class="co"># Filter on last year data</span>
+data_last &lt;-<span class="st"> </span><span class="kw">filter</span>(data, Year <span class="op">==</span><span class="st"> &#39;2016/17&#39;</span>)</code></pre></div>
+<p>Unless stated otherwise, data shown below corresponds to the 2016/17 period (<code>data_last</code>). Let’s have a quick look at the range of average scores for each question.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">data_last <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">group_by</span>(Measure) <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">summarise</span>(<span class="dt">Min_Score =</span> <span class="kw">min</span>(Value, <span class="dt">na.rm=</span>T), 
+            <span class="dt">Max_Score =</span> <span class="kw">max</span>(Value, <span class="dt">na.rm=</span>T))</code></pre></div>
+<pre><code>FALSE # A tibble: 4 x 3
+FALSE   Measure            Min_Score Max_Score
+FALSE   &lt;chr&gt;                  &lt;dbl&gt;     &lt;dbl&gt;
+FALSE 1 Anxiety (reversed)      6.50      7.53
+FALSE 2 Happiness               7.10      7.91
+FALSE 3 Satisfaction            7.18      7.96
+FALSE 4 Worthwile               7.44      8.08</code></pre>
+<p>As you can see, all results are contained within 1 point, on a scale of 10. Again, I am not sure to what extent these differences are statistically relevant, so I will be careful and not draw too many conclusions about it. But, this does not prevent us from drawing some nice maps!</p>
+</div>
+<div id="administrative-and-natural-borders" class="section level3">
+<h3>Administrative and natural borders</h3>
+<p>To draw a map, borough boundaries are required and are taken from the <a href="https://data.london.gov.uk/dataset/statistical-gis-boundary-files-london">London Datastore</a> again. Also, I want the Thames river to appear on the map, so an extra <a href="http://download.geofabrik.de/europe/great-britain/england/greater-london.html">shapefile</a> is necessary.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(sf)
+
+<span class="kw">unzip</span>(<span class="st">&quot;~/Dev/map-data/greater-london-latest-free.shp.zip&quot;</span>, <span class="dt">exdir =</span> <span class="st">&quot;~/Dev/map-data/osm-shp/&quot;</span>)
+<span class="kw">unzip</span>(<span class="st">&quot;~/Dev/map-data/statistical-gis-boundaries-london.zip&quot;</span>, <span class="dt">exdir =</span> <span class="st">&quot;~/Dev/map-data/ldn-boundaries-shp/&quot;</span>)
+
+sf.waterways &lt;-<span class="st"> </span>sf<span class="op">::</span><span class="kw">st_read</span>(<span class="st">&quot;~/Dev/map-data/osm-shp/gis.osm_water_a_free_1.shp&quot;</span>)
+sf.wards &lt;-<span class="st"> </span>sf<span class="op">::</span><span class="kw">st_read</span>(<span class="st">&quot;~/Dev/map-data/statistical-gis-boundaries-london/ESRI/London_Ward_CityMerged.shp&quot;</span>) <span class="op">%&gt;%</span>
+<span class="st">  </span>sf<span class="op">::</span><span class="kw">st_transform</span>(<span class="dv">4326</span>)
+sf.thames &lt;-<span class="st"> </span>sf.waterways <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">filter</span>(name <span class="op">==</span><span class="st"> &quot;River Thames&quot;</span>)
+sf.boroughs &lt;-<span class="st"> </span>sf.wards <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">group_by</span>(LB_GSS_CD, BOROUGH) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">summarise</span>() <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">ungroup</span>()</code></pre></div>
+</div>
+<div id="utility-functions" class="section level3">
+<h3>Utility functions</h3>
+<p>A couple of mapping theme functions are defined here, which will be used later on.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Custom theme</span>
+theme_map &lt;-<span class="st"> </span><span class="cf">function</span>(...){
+  bg_fill &lt;-<span class="st"> &#39;#f5f5f2&#39;</span>
+  hrbrthemes<span class="op">::</span><span class="kw">theme_ipsum</span>(<span class="dt">plot_title_size =</span> <span class="dv">14</span>) <span class="op">+</span>
+<span class="st">  </span><span class="kw">theme</span>(
+    <span class="dt">axis.text.x =</span> <span class="kw">element_blank</span>(),
+    <span class="dt">axis.text.y =</span> <span class="kw">element_blank</span>(),
+    <span class="dt">legend.background =</span> <span class="kw">element_rect</span>(<span class="dt">fill =</span> bg_fill, <span class="dt">color =</span> <span class="ot">NA</span>),
+    <span class="dt">legend.position =</span> <span class="st">&#39;bottom&#39;</span>,
+    <span class="dt">legend.text =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">12</span>),
+    <span class="dt">legend.title =</span> <span class="kw">element_text</span>(<span class="dt">size =</span> <span class="dv">12</span>),
+    <span class="dt">panel.background =</span> <span class="kw">element_rect</span>(<span class="dt">fill =</span> bg_fill, <span class="dt">color =</span> <span class="ot">NA</span>),
+    <span class="dt">panel.spacing =</span> <span class="kw">unit</span>(<span class="dv">1</span>, <span class="st">&#39;mm&#39;</span>),
+    <span class="dt">panel.grid.major =</span> <span class="kw">element_line</span>(<span class="dt">colour =</span> <span class="st">&#39;transparent&#39;</span>),
+    <span class="dt">plot.background =</span> <span class="kw">element_rect</span>(<span class="dt">fill =</span> bg_fill, <span class="dt">color =</span> <span class="ot">NA</span>), 
+    <span class="dt">plot.caption =</span> <span class="kw">element_text</span>(<span class="dt">face =</span> <span class="st">&#39;plain&#39;</span>, <span class="dt">hjust =</span> <span class="dv">0</span>, <span class="dt">size =</span> <span class="dv">11</span>),
+    <span class="dt">plot.margin =</span> <span class="kw">unit</span>(<span class="kw">c</span>(<span class="dv">1</span>,<span class="dv">1</span>,<span class="dv">1</span>,<span class="dv">1</span>), <span class="st">&#39;mm&#39;</span>),
+    <span class="dt">strip.text =</span> <span class="kw">element_text</span>(<span class="dt">vjust=</span><span class="dv">1</span>, <span class="dt">size =</span> <span class="dv">12</span>),
+    ...)
+}
+
+<span class="co"># Custom legend guide</span>
+guide_map &lt;-<span class="st"> </span><span class="cf">function</span>(<span class="dt">barheight =</span> <span class="kw">unit</span>(<span class="dv">2</span>, <span class="st">&#39;mm&#39;</span>), <span class="dt">barwidth =</span> <span class="kw">unit</span>(<span class="dv">85</span>, <span class="st">&#39;mm&#39;</span>), ...){
+  <span class="kw">guide_colourbar</span>(<span class="dt">barheight =</span> barheight,
+                <span class="dt">barwidth =</span> barwidth,
+                <span class="dt">direction =</span> <span class="st">&#39;horizontal&#39;</span>,
+                <span class="dt">draw.ulim =</span> <span class="ot">FALSE</span>,
+                <span class="dt">title.position =</span> <span class="st">&#39;top&#39;</span>,
+                <span class="dt">title.hjust =</span> <span class="fl">0.5</span>, 
+                <span class="dt">label.hjust =</span> <span class="fl">0.5</span>)
+}</code></pre></div>
+</div>
+</div>
+<div id="london-well-being-scores" class="section level2">
+<h2>London well-being scores</h2>
+<p>All we have from the dataset are average answers per borough, that we can display on a choropleth map. The City of London data is not available, hence the space is left blank.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Merge data with shapefile, and plot</span>
+to_plot &lt;-<span class="st"> </span>sf.boroughs <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">select</span>(LB_GSS_CD, geometry) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">right_join</span>(data_last, <span class="dt">by =</span> <span class="kw">c</span>(<span class="st">&#39;LB_GSS_CD&#39;</span>=<span class="st">&#39;Code&#39;</span>))
+
+plt &lt;-<span class="st"> </span><span class="kw">ggplot</span>(to_plot) <span class="op">+</span>
+<span class="st">  </span><span class="kw">facet_wrap</span>(<span class="op">~</span>Question, <span class="dt">nrow=</span><span class="dv">1</span>, <span class="dt">labeller=</span><span class="kw">labeller</span>(<span class="dt">Question =</span> <span class="kw">label_wrap_gen</span>(<span class="dv">40</span>))) <span class="op">+</span>
+<span class="st">  </span><span class="kw">geom_sf</span>(<span class="kw">aes</span>(<span class="dt">fill=</span>Value), <span class="dt">col=</span><span class="st">&#39;black&#39;</span>, <span class="dt">size=</span><span class="fl">0.03</span>, <span class="dt">na.rm=</span><span class="ot">TRUE</span>) <span class="op">+</span>
+<span class="st">  </span><span class="kw">geom_sf</span>(<span class="dt">data=</span>sf.thames, <span class="dt">fill=</span><span class="st">&#39;white&#39;</span>, <span class="dt">col=</span><span class="ot">NA</span>) <span class="op">+</span>
+<span class="st">  </span><span class="kw">scale_fill_gradientn</span>(<span class="dt">colours =</span> RColorBrewer<span class="op">::</span><span class="kw">brewer.pal</span>(<span class="dv">11</span>, <span class="st">&#39;Spectral&#39;</span>),
+                       <span class="dt">limits =</span> <span class="kw">c</span>(<span class="fl">5.5</span>,<span class="fl">8.5</span>),
+                       <span class="dt">na.value =</span> <span class="st">&#39;white&#39;</span>, 
+                       <span class="dt">guide =</span> <span class="kw">guide_map</span>()) <span class="op">+</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">labs</span>(<span class="dt">caption =</span> <span class="st">&#39;Source: London Datastore</span><span class="ch">\n</span><span class="st">Graphic by Pierre-Ange Oliva&#39;</span>,
+       <span class="dt">fill =</span> <span class="st">&#39;Average answer per borough (on a scale of 0 to 10)&#39;</span>,
+       <span class="dt">title =</span> <span class="st">&#39;Well-being in London&#39;</span>) <span class="op">+</span>
+<span class="st">  </span><span class="kw">theme_map</span>()
+plt</code></pre></div>
+<p><img src="/post/2018-03-02-personal-well-being-in-london_files/figure-html/unnamed-chunk-7-1.png" width="860.25" /></p>
+<p>Looking at the exhibit above, people in Hounslow seem to (on average) compare favourably with the rest of London on all accounts. More generally the south-west of London seem to be happier and more satisfied.</p>
+</div>
+<div id="london-compared-to-the-whole-of-england" class="section level2">
+<h2>London compared to the whole of England</h2>
+<p>A similar map is drawn, but absolute scores are no longer considered and instead compared to the whole of England. Positive scores mean that the borough is better off than the whole of England and is filled with a shade of blue.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Add 2 new columns: England scores and differences between boroughs and England</span>
+comparison_eng &lt;-<span class="st"> </span>data_last <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">filter</span>(Area <span class="op">==</span><span class="st"> &#39;England&#39;</span>) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">select</span>(Year, Measure, <span class="dt">Value_England =</span> Value) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">right_join</span>(data_last, <span class="dt">by =</span> <span class="kw">c</span>(<span class="st">&#39;Year&#39;</span>, <span class="st">&#39;Measure&#39;</span>)) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Comparison =</span> Value <span class="op">-</span><span class="st"> </span>Value_England)
+
+to_plot2 &lt;-<span class="st"> </span>sf.boroughs <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">select</span>(LB_GSS_CD, geometry) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">right_join</span>(comparison_eng, <span class="dt">by=</span><span class="kw">c</span>(<span class="st">&#39;LB_GSS_CD&#39;</span>=<span class="st">&#39;Code&#39;</span>))
+
+plt2 &lt;-<span class="st"> </span><span class="kw">ggplot</span>(to_plot2) <span class="op">+</span>
+<span class="st">  </span><span class="kw">facet_wrap</span>(<span class="op">~</span>Question, <span class="dt">nrow=</span><span class="dv">1</span>, <span class="dt">labeller=</span><span class="kw">labeller</span>(<span class="dt">Question=</span><span class="kw">label_wrap_gen</span>(<span class="dv">40</span>))) <span class="op">+</span>
+<span class="st">  </span><span class="kw">geom_sf</span>(<span class="kw">aes</span>(<span class="dt">fill=</span>Comparison), <span class="dt">col=</span><span class="st">&#39;white&#39;</span>, <span class="dt">size=</span><span class="fl">0.06</span>, <span class="dt">na.rm=</span><span class="ot">TRUE</span>) <span class="op">+</span>
+<span class="st">  </span><span class="kw">geom_sf</span>(<span class="dt">data=</span>sf.thames, <span class="dt">fill=</span><span class="st">&#39;white&#39;</span>, <span class="dt">col=</span><span class="ot">NA</span>) <span class="op">+</span>
+<span class="st">  </span><span class="kw">scale_fill_gradientn</span>(<span class="dt">colours =</span> RColorBrewer<span class="op">::</span><span class="kw">brewer.pal</span>(<span class="dv">10</span>, <span class="st">&#39;RdBu&#39;</span>),
+                       <span class="dt">na.value =</span> <span class="st">&#39;white&#39;</span>,
+                       <span class="dt">limits =</span> <span class="kw">c</span>(<span class="op">-</span>.<span class="dv">6</span>,.<span class="dv">6</span>),
+                       <span class="dt">breaks =</span> <span class="kw">seq</span>(<span class="op">-</span>.<span class="dv">5</span>,.<span class="dv">5</span>,.<span class="dv">2</span>),
+                       <span class="dt">guide =</span> <span class="kw">guide_map</span>(<span class="kw">unit</span>(<span class="dv">2</span>, <span class="st">&#39;mm&#39;</span>), <span class="kw">unit</span>(<span class="dv">95</span>, <span class="st">&#39;mm&#39;</span>))) <span class="op">+</span>
+<span class="st">  </span><span class="kw">labs</span>(<span class="dt">title =</span> <span class="st">&#39;Well-being: London vs the whole of England&#39;</span>,
+       <span class="dt">caption =</span> <span class="st">&#39;Source: London Datastore</span><span class="ch">\n</span><span class="st">Graphic by Pierre-Ange Oliva&#39;</span>,
+       <span class="dt">fill =</span> <span class="st">&#39;London answers vs the whole of England (scale of 0 to 10)&#39;</span>) <span class="op">+</span>
+<span class="st">  </span><span class="kw">theme_map</span>()
+plt2</code></pre></div>
+<p><img src="/post/2018-03-02-personal-well-being-in-london_files/figure-html/unnamed-chunk-8-1.png" width="860.25" /></p>
+<p>Once again, Hounslow which seemed to be the “happiest” borough in London, compares very well with England too, and in fact has the highest happiness score across England (not clearly visible on the map though).</p>
+</div>

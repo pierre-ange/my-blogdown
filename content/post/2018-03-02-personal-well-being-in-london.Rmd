@@ -1,0 +1,203 @@
+---
+title: Mapping personal well-being data in London
+author: Pierre-Ange Oliva
+date: '2018-03-02'
+slug: personal-well-being-in-london
+comments: false
+categories: [R]
+tags: [London, R]
+large_thumb: true
+draft: false
+output:
+  blogdown::html_page:
+    dev: 'png'
+    highlight: tango
+    css: "../../css/custom.css"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message=FALSE, warning=FALSE, comment=FALSE, 
+                      results='hide', cache=TRUE, echo=TRUE, dpi=75, fig.retina=2)
+```
+
+## Dataset
+### Well-being study
+A cool thing about London (among others) is that more and more data about the capital is made openly available, in particular through the [London Datastore](https://data.london.gov.uk/) website. 
+
+A few days ago, a dataset was updated with 2017 data: [the personal well-being by borough](https://data.london.gov.uk/dataset/subjective-personal-well-being-borough). The complete methodology can be found [here](https://www.ons.gov.uk/peoplepopulationandcommunity/wellbeing/methodologies/personalwellbeingsurveyuserguide), but in a nutshell people were asked to answer four questions on a scale of 0 to 10, where 0 is *not at all* and 10 is *completely*:
+
+* Overall, how satisfied are you with your life nowadays?
+* Overall, to what extent do you feel the things you do in your life are worthwhile?
+* Overall, how happy did you feel yesterday?
+* Overall, how anxious did you feel yesterday?
+
+Average scores per borough were published on the ONS website and on the London Datastore. I used the dataset from the latter, because it was already nicely formatted and London-centric. One thing though, I could not find confidence intervals for this dataset, but I am certain that they are available somewhere on the ONS website. I will then assume that the statistical uncertainties in the numbers are small enough and that an inter-borough comparison is sensible ... 
+
+This being said, let's download the data.
+```{r}
+# Download the data
+url <- "https://files.datapress.com/london/dataset/subjective-personal-well-being-borough/2018-02-21T17:26:22.12/personal-well-being-borough.xls"
+path <- "~/Dev/R/london-wellbeing/wellbeing.xls"
+httr::GET(url, httr::write_disk(path, overwrite=TRUE))
+```
+
+Thanks to the `tidyverse` and the `readxl` packages, the Excel spreadsheet can be opened, read and converted into a data frame.
+```{r}
+library(tidyverse)
+
+# Function to read ranges corresponding to each question inside the Excel doc
+read_range <- function(range, range_name){ 
+  readxl::read_excel(path, sheet = "Summary - Mean Scores", range = range) %>% 
+    na.omit() %>% # Remove empty Excel rows
+    mutate_all(as.numeric) %>%
+    bind_cols(areas) %>%
+    gather(Year, Value, -Code, -Area, factor_key = TRUE) %>%
+    mutate(Measure = range_name) %>%
+    # Add exact question
+    mutate(Question = 
+             case_when(
+               Measure == 'Happiness' ~ 'How happy did you feel yesterday?',
+               Measure == 'Worthwile' ~ 'To what extent do you feel the things you do in your life are worthwhile?',
+               Measure == 'Satisfaction' ~ 'How satisfied are you with your life nowadays?',
+               Measure == 'Anxiety' ~ 'How anxious did you feel yesterday?'
+             ))
+}
+
+# Data as a long data frame
+areas <- readxl::read_excel(path, sheet = "Summary - Mean Scores", range = "A2:B53") %>% na.omit()
+ranges <- c("Satisfaction"="C2:H53", "Worthwile"="J2:O53", "Happiness"="Q2:V53", "Anxiety"="X2:AC53") 
+data <- ranges %>% purrr::map2_df(names(.), read_range)
+```
+
+Before going further: we reverse the *anxiety* scores to have a colour mapping in line with the other questions, i.e. the closer to 10 the better. Hence, on the plot, a large score on the anxiety question is synonym of a relative serenity in the borough. 
+```{r}
+# Reverse anxiety scores (0=very anxious, 10=not at all) to be in line with other questions
+data[data$Measure == 'Anxiety', 'Value'] <- 10 - data[data$Measure == 'Anxiety', 'Value']
+
+# Amend the Measure label
+data[data$Measure == 'Anxiety', 'Measure'] <- 'Anxiety (reversed)'
+
+# Filter on last year data
+data_last <- filter(data, Year == '2016/17')
+```
+
+Unless stated otherwise, data shown below corresponds to the 2016/17 period (`data_last`). Let's have a quick look at the range of average scores for each question.
+```{r results='markup'}
+data_last %>% 
+  group_by(Measure) %>% 
+  summarise(Min_Score = min(Value, na.rm=T), 
+            Max_Score = max(Value, na.rm=T))
+```
+
+As you can see, all results are contained within 1 point, on a scale of 10. Again, I am not sure to what extent these differences are statistically relevant, so I will be careful and not draw too many conclusions about it. But, this does not prevent us from drawing some nice maps!
+
+### Administrative and natural borders
+To draw a map, borough boundaries are required and are taken from the [London Datastore](https://data.london.gov.uk/dataset/statistical-gis-boundary-files-london) again. 
+Also, I want the Thames river to appear on the map, so an extra [shapefile](http://download.geofabrik.de/europe/great-britain/england/greater-london.html) is necessary. 
+```{r}
+library(sf)
+
+unzip("~/Dev/map-data/greater-london-latest-free.shp.zip", exdir = "~/Dev/map-data/osm-shp/")
+unzip("~/Dev/map-data/statistical-gis-boundaries-london.zip", exdir = "~/Dev/map-data/ldn-boundaries-shp/")
+
+sf.waterways <- sf::st_read("~/Dev/map-data/osm-shp/gis.osm_water_a_free_1.shp")
+sf.wards <- sf::st_read("~/Dev/map-data/statistical-gis-boundaries-london/ESRI/London_Ward_CityMerged.shp") %>%
+  sf::st_transform(4326)
+sf.thames <- sf.waterways %>% filter(name == "River Thames")
+sf.boroughs <- sf.wards %>% group_by(LB_GSS_CD, BOROUGH) %>% summarise() %>% ungroup()
+```
+
+### Utility functions
+A couple of mapping theme functions are defined here, which will be used later on.
+```{r}
+# Custom theme
+theme_map <- function(...){
+  bg_fill <- '#f5f5f2'
+  hrbrthemes::theme_ipsum(plot_title_size = 14) +
+  theme(
+    axis.text.x = element_blank(),
+    axis.text.y = element_blank(),
+    legend.background = element_rect(fill = bg_fill, color = NA),
+    legend.position = 'bottom',
+    legend.text = element_text(size = 12),
+    legend.title = element_text(size = 12),
+    panel.background = element_rect(fill = bg_fill, color = NA),
+    panel.spacing = unit(1, 'mm'),
+    panel.grid.major = element_line(colour = 'transparent'),
+    plot.background = element_rect(fill = bg_fill, color = NA), 
+    plot.caption = element_text(face = 'plain', hjust = 0, size = 11),
+    plot.margin = unit(c(1,1,1,1), 'mm'),
+    strip.text = element_text(vjust=1, size = 12),
+    ...)
+}
+
+# Custom legend guide
+guide_map <- function(barheight = unit(2, 'mm'), barwidth = unit(85, 'mm'), ...){
+  guide_colourbar(barheight = barheight,
+                barwidth = barwidth,
+                direction = 'horizontal',
+                draw.ulim = FALSE,
+                title.position = 'top',
+                title.hjust = 0.5, 
+                label.hjust = 0.5)
+}
+```
+
+## London well-being scores
+All we have from the dataset are average answers per borough, that we can display on a choropleth map. The City of London data is not available, hence the space is left blank.
+
+```{r fig.width=11.47}
+# Merge data with shapefile, and plot
+to_plot <- sf.boroughs %>%
+  select(LB_GSS_CD, geometry) %>%
+  right_join(data_last, by = c('LB_GSS_CD'='Code'))
+
+plt <- ggplot(to_plot) +
+  facet_wrap(~Question, nrow=1, labeller=labeller(Question = label_wrap_gen(40))) +
+  geom_sf(aes(fill=Value), col='black', size=0.03, na.rm=TRUE) +
+  geom_sf(data=sf.thames, fill='white', col=NA) +
+  scale_fill_gradientn(colours = RColorBrewer::brewer.pal(11, 'Spectral'),
+                       limits = c(5.5,8.5),
+                       na.value = 'white', 
+                       guide = guide_map()) + 
+  labs(caption = 'Source: London Datastore\nGraphic by Pierre-Ange Oliva',
+       fill = 'Average answer per borough (on a scale of 0 to 10)',
+       title = 'Well-being in London') +
+  theme_map()
+plt
+```
+
+Looking at the exhibit above, people in Hounslow seem to (on average) compare favourably with the rest of London on all accounts. More generally the south-west of London seem to be happier and more satisfied.
+
+## London compared to the whole of England
+A similar map is drawn, but absolute scores are no longer considered and instead compared to the whole of England. Positive scores mean that the borough is better off than the whole of England and is filled with a shade of blue.  
+
+```{r fig.width=11.47}
+# Add 2 new columns: England scores and differences between boroughs and England
+comparison_eng <- data_last %>%
+  filter(Area == 'England') %>%
+  select(Year, Measure, Value_England = Value) %>%
+  right_join(data_last, by = c('Year', 'Measure')) %>%
+  mutate(Comparison = Value - Value_England)
+
+to_plot2 <- sf.boroughs %>%
+  select(LB_GSS_CD, geometry) %>%
+  right_join(comparison_eng, by=c('LB_GSS_CD'='Code'))
+
+plt2 <- ggplot(to_plot2) +
+  facet_wrap(~Question, nrow=1, labeller=labeller(Question=label_wrap_gen(40))) +
+  geom_sf(aes(fill=Comparison), col='white', size=0.06, na.rm=TRUE) +
+  geom_sf(data=sf.thames, fill='white', col=NA) +
+  scale_fill_gradientn(colours = RColorBrewer::brewer.pal(10, 'RdBu'),
+                       na.value = 'white',
+                       limits = c(-.6,.6),
+                       breaks = seq(-.5,.5,.2),
+                       guide = guide_map(unit(2, 'mm'), unit(95, 'mm'))) +
+  labs(title = 'Well-being: London vs the whole of England',
+       caption = 'Source: London Datastore\nGraphic by Pierre-Ange Oliva',
+       fill = 'London answers vs the whole of England (scale of 0 to 10)') +
+  theme_map()
+plt2
+```
+
+Once again, Hounslow which seemed to be the "happiest" borough in London, compares very well with England too, and in fact has the highest happiness score across England (not clearly visible on the map though).

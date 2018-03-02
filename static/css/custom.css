@@ -1,0 +1,14 @@
+/* Custom CSS */
+
+body{ /* Normal  */
+      font-size: 14px;
+  }
+
+code.r{ /* Code block */
+    font-size: 13px;
+}
+pre { /* Code block - determines code spacing between lines */
+    font-size: 13px;
+}
+
+.container{width:100%;max-width:900px;padding:0 20px;margin:0 auto}
