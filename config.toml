@@ -23,7 +23,7 @@ enableEmoji = true
 defaultContentLanguage = "en"
 
 [params.info]
-description = "Trying to be long gamma"
+description = "Trying to be long gamma, but essentially short theta."
 title404 = "Nothing's here!"
 
 [params.assets]
