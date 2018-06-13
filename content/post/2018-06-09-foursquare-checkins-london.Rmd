@@ -28,7 +28,7 @@ So yes, I tend to use these two apps quite often ... in fact I do check-in to mo
 
 And [apparently](https://medium.com/foursquare-direct/say-hello-to-the-new-swarm-5-0-1f18bdda28da) I am not alone: the Swarm development team realized it, called this behaviour **lifelogging** and re-designed their app around it. For example, here below is a snapshot of the Profile section in Swarm. A map presents all the different places I've checked into, which can be zoomed in for more details. 
 
-<!-- <center>![Caption](swarm-profile-map.jpg){ height=20%, width=20%}</center> -->
+<center>![Caption](../assets/swarm-profile-map.jpg){ height=20%, width=20%}</center>
 
 Places are presented as clusters to avoid data overplotting. To get to see all venues as points, you would have to zoom in aggressively until only a handful of streets remain visible on screen.
 
