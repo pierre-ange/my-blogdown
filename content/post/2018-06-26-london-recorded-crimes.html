@@ -1,0 +1,496 @@
+---
+title: London Reported Crimes
+author: Pierre-Ange Oliva
+date: '2018-06-26'
+slug: london-reported-crimes
+comments: false
+categories: [R]
+tags: [London, R, map]
+large_thumb: true
+draft: false
+output: 
+  html_document:
+    theme: simplex
+---
+
+
+
+<div id="plan" class="section level2">
+<h2>Plan</h2>
+<p>A count of recorded crimes is available on the London datastore. The data is available at LSOA level (Lower Super Output Area, basically a UK geographic hierarchy designed to improve the reporting of small area statistics by being as consistent in population size as possible: minimum population is 1000, average is 1500) and monthly over the last 24 months.</p>
+<p>I am always interested in this kind of statistics so I will look at the dataset in this blog post.</p>
+</div>
+<div id="london-datastore" class="section level2">
+<h2>London Datastore</h2>
+<p>First, let’s download the data, save it in a file somewhere, and tidy it.</p>
+<pre class="r"><code>library(tidyverse)
+
+# Download the data
+url &lt;- &quot;https://data.london.gov.uk/download/recorded_crime_summary/644a9e0d-75a3-4c3a-91ad-03d2a7cb8f8e/MPS%20LSOA%20Level%20Crime%20%28most%20recent%2024%20months%29.csv&quot;
+path &lt;- &quot;~/Dev/R/london-crimes/data.csv&quot;
+httr::GET(url, httr::write_disk(path, overwrite = TRUE))</code></pre>
+<pre class="r"><code>data &lt;- readr::read_csv(path) %&gt;%
+  dplyr::rename(Code = `LSOA Code`, Cat1 = `Major Category`, Cat2 = `Minor Category`) %&gt;%
+  tidyr::gather(Date, Count, -(Code:Cat2)) %&gt;%
+  dplyr::mutate_at(vars(Date), ~as.Date(paste0(., &quot;01&quot;), format = &quot;%Y%m%d&quot;)) %&gt;%
+  dplyr::mutate(Month = lubridate::month(Date), Year = lubridate::year(Date)) %&gt;%
+  dplyr::mutate_if(is.character, forcats::as_factor)</code></pre>
+</div>
+<div id="glimpse-at-the-data" class="section level2">
+<h2>Glimpse at the data</h2>
+<p>Let’s look at how crimes are classified, and which ones have been the most frequently committed in London over the last two years. More information on counting rules can be found <a href="https://www.gov.uk/government/publications/counting-rules-for-recorded-crime">here</a>. I use <code>kableExtra</code>and <code>formattable</code>to quickly show the crime categories most reported.</p>
+<p>At a glance, it looks like most frequent crimes in London are Residential Burglaries, Theft and Violences against the Person (incl. Assault and Harassment) and Possession of Drugs.</p>
+<pre class="r"><code>library(kableExtra)
+library(formattable)
+
+data %&gt;% 
+  group_by(Cat1, Cat2) %&gt;%
+  summarise(Count = round(sum(Count)/1e3)) %&gt;%
+  mutate(Count = formattable::color_tile(&#39;white&#39;, &#39;orange&#39;)(Count)) %&gt;%
+  dplyr::rename(Count_thousands = Count) %&gt;%
+  knitr::kable(format = &#39;html&#39;, align = c(&#39;l&#39;,&#39;l&#39;, &#39;r&#39;), escape = FALSE) %&gt;%
+  kableExtra::kable_styling(bootstrap_options = c(&#39;condensed&#39;, &#39;hover&#39;), full_width = FALSE, position = &quot;center&quot;) %&gt;%
+  kableExtra::collapse_rows(columns = 1)</code></pre>
+<table class="table table-condensed table-hover" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="text-align:left;">
+Cat1
+</th>
+<th style="text-align:left;">
+Cat2
+</th>
+<th style="text-align:right;">
+Count_thousands
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;vertical-align: middle !important;" rowspan="2">
+Burglary
+</td>
+<td style="text-align:left;">
+Burglary - Business and Community
+</td>
+<td style="text-align:right;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffffff">45</span>
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Burglary - Residential
+</td>
+<td style="text-align:right;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffa500">104</span>
+</td>
+</tr>
+<tr>
+<td style="text-align:left;vertical-align: middle !important;" rowspan="5">
+Criminal Damage
+</td>
+<td style="text-align:left;">
+Arson
+</td>
+<td style="text-align:right;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffffff">4</span>
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Criminal Damage To M/V
+</td>
+<td style="text-align:right;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffa500">50</span>
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Criminal Damage To Other Bldg
+</td>
+<td style="text-align:right;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffefd2">12</span>
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Criminal Damage To a Dwelling
+</td>
+<td style="text-align:right;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffd079">28</span>
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Other Criminal Damage
+</td>
+<td style="text-align:right;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffca69">31</span>
+</td>
+</tr>
+<tr>
+<td style="text-align:left;vertical-align: middle !important;" rowspan="3">
+Drugs
+</td>
+<td style="text-align:left;">
+Drug Trafficking
+</td>
+<td style="text-align:right;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fff8eb">6</span>
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Other Drug Offences
+</td>
+<td style="text-align:right;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffffff">1</span>
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Possession Of Drugs
+</td>
+<td style="text-align:right;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffa500">66</span>
+</td>
+</tr>
+<tr>
+<td style="text-align:left;vertical-align: middle !important;" rowspan="2">
+Other Notifiable Offences
+</td>
+<td style="text-align:left;">
+Going Equipped
+</td>
+<td style="text-align:right;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffffff">1</span>
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Other Notifiable
+</td>
+<td style="text-align:right;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffa500">31</span>
+</td>
+</tr>
+<tr>
+<td style="text-align:left;vertical-align: middle !important;" rowspan="2">
+Robbery
+</td>
+<td style="text-align:left;">
+Business Property
+</td>
+<td style="text-align:right;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffffff">4</span>
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Personal Property
+</td>
+<td style="text-align:right;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffa500">54</span>
+</td>
+</tr>
+<tr>
+<td style="text-align:left;vertical-align: middle !important;" rowspan="8">
+Theft and Handling
+</td>
+<td style="text-align:left;">
+Handling Stolen Goods
+</td>
+<td style="text-align:right;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffffff">2</span>
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+M/V Interference &amp; Tampering
+</td>
+<td style="text-align:right;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fff4e1">26</span>
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Other Theft
+</td>
+<td style="text-align:right;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffa500">211</span>
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Theft From M/V
+</td>
+<td style="text-align:right;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffcd73">116</span>
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Theft From Shops
+</td>
+<td style="text-align:right;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffd78f">93</span>
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Theft Person
+</td>
+<td style="text-align:right;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffdb99">85</span>
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Theft/Taking of M/V
+</td>
+<td style="text-align:right;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffe6b8">60</span>
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Theft/Taking of Pedal Cycles
+</td>
+<td style="text-align:right;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffefd1">39</span>
+</td>
+</tr>
+<tr>
+<td style="text-align:left;vertical-align: middle !important;" rowspan="7">
+Violence Against the Person
+</td>
+<td style="text-align:left;">
+Assault with Injury
+</td>
+<td style="text-align:right;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffc761">101</span>
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Common Assault
+</td>
+<td style="text-align:right;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffb42b">136</span>
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Harassment
+</td>
+<td style="text-align:right;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffa500">164</span>
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Murder
+</td>
+<td style="text-align:right;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffffff">0</span>
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Offensive Weapon
+</td>
+<td style="text-align:right;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fff7ea">13</span>
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Other Violence
+</td>
+<td style="text-align:right;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fff2dc">22</span>
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Wounding/GBH
+</td>
+<td style="text-align:right;">
+<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffe4b2">49</span>
+</td>
+</tr>
+</tbody>
+</table>
+<p>Let’s quickly have a look at the evolution of these reported crimes over the last 24 months, to see if a trend emerges. I split the charts by major category.</p>
+<pre class="r"><code>library(ggplot2)
+
+data %&gt;%
+  group_by(Cat1, Month, Year, Date) %&gt;%
+  dplyr::summarise(Count = sum(Count)) %&gt;%
+  ggplot() +
+  geom_line(aes(Date, Count)) +
+  facet_wrap(~Cat1, scales = &#39;free&#39;)</code></pre>
+<p><img src="/post/2018-06-26-london-recorded-crimes_files/figure-html/unnamed-chunk-4-1.png" width="100%" style="display: block; margin: auto;" /></p>
+<p>The picture varies quite a bit depending on the category of crimes. The overall trend in reported burglaries and robberies seems to be increasing while criminal damages and drug-related crimes seem to be decreasing.</p>
+<p>Also, since the beginning of 2018, there seems to be a sudden increase in reported criminal damages, violences against the person, theft and other notifiable offenses.</p>
+</div>
+<div id="crimes-location" class="section level2">
+<h2>Crimes Location</h2>
+<p>I figured it would be interesting to understand where those crimes occured within London.</p>
+<p>For this I will use the <code>sf</code> package and some shapefiles found on the Internet to draw London boroughs, wards, and LSOAs. I will also add the Thames River to the map. Let’s construct those objects.</p>
+<pre class="r"><code>library(sf)
+
+unzip(&quot;~/Dev/map-data/greater-london-latest-free.shp.zip&quot;, exdir = &quot;~/Dev/map-data/osm-shp/&quot;)
+unzip(&quot;~/Dev/map-data/statistical-gis-boundaries-london.zip&quot;, exdir = &quot;~/Dev/map-data/ldn-boundaries-shp/&quot;)
+crs &lt;- 4326
+
+sf.waterways &lt;- sf::st_read(&quot;~/Dev/map-data/osm-shp/gis.osm_water_a_free_1.shp&quot;) %&gt;% 
+  filter(name %in% c(&quot;River Thames&quot;))
+sf.borough &lt;- sf::st_read(&quot;~/Dev/map-data/statistical-gis-boundaries-london/ESRI/London_Ward_CityMerged.shp&quot;) %&gt;%
+  sf::st_transform(crs) %&gt;% 
+  group_by(LB_GSS_CD, BOROUGH) %&gt;% 
+  summarise() %&gt;% 
+  ungroup()
+sf.wards &lt;- sf::st_read(&quot;~/Dev/map-data/statistical-gis-boundaries-london/ESRI/London_Ward_CityMerged.shp&quot;) %&gt;%
+  sf::st_transform(crs) %&gt;% 
+  group_by(GSS_CODE, NAME) %&gt;% 
+  summarise() %&gt;% 
+  ungroup()
+sf.lsoa &lt;- sf::st_read(&quot;~/Dev/map-data/statistical-gis-boundaries-london/ESRI/LSOA_2011_London_gen_MHW.shp&quot;) %&gt;%
+  sf::st_transform(crs) %&gt;% 
+  group_by(LSOA11CD, LAD11NM) %&gt;% 
+  summarise() %&gt;% 
+  ungroup()
+
+# Add ward name to LSOA simple features object
+lsoa_ward &lt;- readr::read_csv(&quot;~/Dev/map-data/Lower_Layer_Super_Output_Area_2011_to_Ward_2015_Lookup_in_England_and_Wales.csv&quot;)
+sf.lsoa &lt;- sf.lsoa %&gt;% 
+  left_join(lsoa_ward %&gt;% select(LSOA11CD, WD15CD, WD15NM), by = &quot;LSOA11CD&quot;)</code></pre>
+<p>I would like to plot a map for each major category of crimes, so I create a function <code>plot_crimes</code>. Inside, I use <code>ggrepel</code>to create labels for wards with high level of crimes. This makes it easier for me to know which area is which.</p>
+<pre class="r"><code>library(ggrepel)
+
+plot_crimes &lt;- function(cat1, annotate = TRUE){
+  
+  # Filter dataset according to major category if user input, or not if not
+  if(is.na(cat1)){ # Keep all crimes
+    data_filtered &lt;- data %&gt;%
+      group_by(Code) %&gt;%
+      summarise(Count = sum(Count))
+    title &lt;- &quot;Crimes&quot;
+  } else {
+    data_filtered &lt;- data %&gt;%
+      filter(Cat1 == cat1) %&gt;%
+      group_by(Code, Cat1) %&gt;%
+      summarise(Count = sum(Count))
+    title &lt;- cat1
+  }
+  
+  
+  # Merge it with sf object, to have the geometry and crime data in one single data frame
+  to_plot &lt;- sf.lsoa %&gt;%
+    select(LSOA11CD, WD15NM, geometry) %&gt;%
+    left_join(data_filtered, by = c(&#39;LSOA11CD&#39;=&#39;Code&#39;)) %&gt;% 
+    mutate(
+      CENTROID = map(geometry, st_centroid),
+      COORDS = map(CENTROID, st_coordinates),
+      COORDS_X = map_dbl(COORDS, 1),
+      COORDS_Y = map_dbl(COORDS, 2))
+  
+  # Create ggplot object
+  ldn_x &lt;- c(-0.30, 0.044) # Limits to Central London
+  ldn_y &lt;- c(51.41, 51.58) # Limits to Central London
+  plt &lt;- ggplot(to_plot) +
+    geom_sf(aes(fill=Count), col=&#39;black&#39;, size=0.01, na.rm=TRUE) +
+    geom_sf(data=sf.borough, fill=NA, col=&#39;black&#39;, size=0.03) +
+    geom_sf(data=sf.wards, fill=NA, col=&#39;black&#39;, size=0.02) +
+    geom_sf(data=sf.waterways, fill=&quot;#002b80&quot;, alpha = 0.7, col=NA) +
+    coord_sf(crs = 4326, xlim = ldn_x, ylim = ldn_y) +
+    scale_fill_gradientn(colours=RColorBrewer::brewer.pal(9,&quot;RdPu&quot;), 
+                         guide = guide_map(), 
+                         na.value = &#39;#f5f5f2&#39;) +
+    labs(caption = &#39;Source: London Datastore\nGraphic by Pierre-Ange Oliva&#39;,
+         title = glue::glue(&#39;{title} in Central London (Jun-16 to May-18)&#39;),
+         x = &quot;&quot;, y = &quot;&quot;) +
+    theme_map()
+  
+  # Add annotations if necessary
+  if(annotate) {
+    # X and Y range of the map
+    x_range &lt;- abs(Reduce(&quot;-&quot;, range(to_plot$COORDS_X)))
+    y_range &lt;- abs(Reduce(&quot;-&quot;, range(to_plot$COORDS_Y)))
+    
+    # Filtered data frame which will be used as annotation dataset
+    # And add labelling params for some wards known to have high level of crimes
+    to_annotate &lt;- to_plot %&gt;%
+      arrange(desc(Count)) %&gt;%
+      head(11) %&gt;%
+      distinct(WD15NM, .keep_all = TRUE) %&gt;%
+      filter(!WD15NM %in% c(&quot;Heathrow Villages&quot;, &quot;Yiewsley&quot;, &quot;Romford Town&quot;, &quot;Fairfield&quot;, &quot;Sutton Central&quot;)) %&gt;% # too far from Central London
+      mutate(
+        nudge_x = case_when(
+          WD15NM %in% c(&quot;West End&quot;) ~ -0.05*x_range,
+          WD15NM %in% c(&quot;Knightsbridge and Belgravia&quot;) ~ -0.09*x_range,
+          WD15NM %in% c(&quot;Junction&quot;) ~ 0.03*x_range,
+          WD15NM %in% c(&quot;Coldharbour&quot;, &quot;Bunhill&quot;) ~ 0.02*x_range,
+          WD15NM %in% c(&quot;Shepherd&#39;s Bush Green&quot;) ~ -0.02*x_range,
+          WD15NM %in% c(&quot;St James&#39;s&quot;) ~ 0.05*x_range,
+          WD15NM %in% c(&quot;Stratford and New Town&quot;) ~ 0*x_range,
+          WD15NM %in% c(&quot;Marylebone High Street&quot;, &quot;Camden Town with Primrose Hill&quot;, &quot;Holborn and Covent Garden&quot;) ~ -0.05*x_range,
+          WD15NM %in% c(&quot;Grove&quot;) ~ 0.05 * x_range,
+          WD15NM %in% c(&quot;Hoxton East &amp; Shoreditch&quot;) ~ 0 * x_range,
+          TRUE ~ 0
+        ),
+        nudge_y = case_when(
+          WD15NM %in% c(&quot;West End&quot;) ~ -0.07*y_range,
+          WD15NM %in% c(&quot;Knightsbridge and Belgravia&quot;) ~ -0.04*y_range,
+          WD15NM %in% c(&quot;Junction&quot;) ~ 0.02*y_range,
+          WD15NM %in% c(&quot;Coldharbour&quot;, &quot;Bunhill&quot;) ~ -0.02*y_range,
+          WD15NM %in% c(&quot;Shepherd&#39;s Bush Green&quot;) ~ 0.02*y_range,
+          WD15NM %in% c(&quot;St James&#39;s&quot;) ~ -0.05*y_range,
+          WD15NM %in% c(&quot;Stratford and New Town&quot;) ~ 0.03*y_range,
+          WD15NM %in% c(&quot;Marylebone High Street&quot;, &quot;Camden Town with Primrose Hill&quot;, &quot;Holborn and Covent Garden&quot;) ~ 0.05*y_range,
+          WD15NM %in% c(&quot;Grove&quot;) ~ 0.02 * y_range,
+          WD15NM %in% c(&quot;Hoxton East &amp; Shoreditch&quot;) ~ 0.05 * y_range,
+          TRUE ~ 0
+        )
+      )
+    
+    plt &lt;- plt + 
+      geom_text_repel(
+        data = to_annotate, 
+        mapping = aes(
+          x = COORDS_X,
+          y = COORDS_Y,
+          label = WD15NM
+        ),
+        nudge_x = to_annotate$nudge_x,
+        nudge_y = to_annotate$nudge_y,
+        force = 10,
+        size = 3,
+        min.segment.length = 0,
+        point.padding = NA,
+        segment.color = &quot;grey50&quot;
+      )
+  }
+  
+  plt
+}</code></pre>
+<p>Let’s call this function for each type of crime, and display the maps!</p>
+<pre class="r"><code>all &lt;- plot_crimes(NA)
+burglary &lt;- plot_crimes(&quot;Burglary&quot;)
+damage &lt;- plot_crimes(&quot;Criminal Damage&quot;)
+drug &lt;- plot_crimes(&quot;Drugs&quot;)
+robbery &lt;- plot_crimes(&quot;Robbery&quot;)
+theft &lt;- plot_crimes(&quot;Theft and Handling&quot;)
+violence &lt;- plot_crimes(&quot;Violence Against the Person&quot;)</code></pre>
+<p><img src="/post/2018-06-26-london-recorded-crimes_files/figure-html/unnamed-chunk-9-1.png" width="100%" style="display: block; margin: auto;" /></p>
+<p><img src="/post/2018-06-26-london-recorded-crimes_files/figure-html/unnamed-chunk-10-1.png" width="100%" style="display: block; margin: auto;" /></p>
+<p><img src="/post/2018-06-26-london-recorded-crimes_files/figure-html/unnamed-chunk-11-1.png" width="100%" style="display: block; margin: auto;" /></p>
+<p><img src="/post/2018-06-26-london-recorded-crimes_files/figure-html/unnamed-chunk-12-1.png" width="100%" style="display: block; margin: auto;" /></p>
+<p><img src="/post/2018-06-26-london-recorded-crimes_files/figure-html/unnamed-chunk-13-1.png" width="100%" style="display: block; margin: auto;" /></p>
+<p><img src="/post/2018-06-26-london-recorded-crimes_files/figure-html/unnamed-chunk-14-1.png" width="100%" style="display: block; margin: auto;" /></p>
+<p><img src="/post/2018-06-26-london-recorded-crimes_files/figure-html/unnamed-chunk-15-1.png" width="100%" style="display: block; margin: auto;" /></p>
+<p>Notably, very central London shows up in all maps as having a large number of reported crimes: not really surprising, and rather expected.</p>
+<p>Also, all these maps tend to resemble one another, i.e similar regions are highlighted more than once: a region having a high level of crime in one particular category is likely to display a high level of crime in other categories too.</p>
+<p>Having lived in London for a few years, most pinker regions follow my expectations. However, I was slightly surprised seeing Coldharbour and Grove as crime hubs. For the latter, after a quick research on the Internet, Coldharbour is actually located around Brixton station, so in fact it is not not really surprising to see it highlighted. Grove is located around Kingston upon Thames.</p>
+</div>

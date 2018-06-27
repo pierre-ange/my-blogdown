@@ -1,0 +1,324 @@
+---
+title: London Reported Crimes
+author: Pierre-Ange Oliva
+date: '2018-06-26'
+slug: london-reported-crimes
+comments: false
+categories: [R]
+tags: [London, R, map]
+large_thumb: true
+draft: false
+output: 
+  html_document:
+    theme: simplex
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message = FALSE, 
+                      warning = FALSE, 
+                      comment = FALSE, 
+                      cache = TRUE, 
+                      echo = TRUE, 
+                      dpi = 300,
+                      out.width = "100%",
+                      fig.width = 8,
+                      fig.height = 6,
+                      fig.align = 'center')
+
+```
+
+## Plan
+
+A count of recorded crimes is available on the London datastore. The data is available at LSOA level (Lower Super Output Area, basically a UK geographic hierarchy designed to improve the reporting of small area statistics by being as consistent in population size as possible: minimum population is 1000, average is 1500) and monthly over the last 24 months.
+
+I am always interested in this kind of statistics so I will look at the dataset in this blog post.
+
+## London Datastore
+
+First, let's download the data, save it in a file somewhere, and tidy it.
+
+```{r results='hide'}
+library(tidyverse)
+
+# Download the data
+url <- "https://data.london.gov.uk/download/recorded_crime_summary/644a9e0d-75a3-4c3a-91ad-03d2a7cb8f8e/MPS%20LSOA%20Level%20Crime%20%28most%20recent%2024%20months%29.csv"
+path <- "~/Dev/R/london-crimes/data.csv"
+httr::GET(url, httr::write_disk(path, overwrite = TRUE))
+```
+
+```{r}
+data <- readr::read_csv(path) %>%
+  dplyr::rename(Code = `LSOA Code`, Cat1 = `Major Category`, Cat2 = `Minor Category`) %>%
+  tidyr::gather(Date, Count, -(Code:Cat2)) %>%
+  dplyr::mutate_at(vars(Date), ~as.Date(paste0(., "01"), format = "%Y%m%d")) %>%
+  dplyr::mutate(Month = lubridate::month(Date), Year = lubridate::year(Date)) %>%
+  dplyr::mutate_if(is.character, forcats::as_factor)
+```
+
+## Glimpse at the data
+
+Let's look at how crimes are classified, and which ones have been the most frequently committed in London over the last two years. 
+More information on counting rules can be found [here](https://www.gov.uk/government/publications/counting-rules-for-recorded-crime). I use `kableExtra`and `formattable`to quickly show the crime categories most reported. 
+
+At a glance, it looks like most frequent crimes in London are Residential Burglaries, Theft and Violences against the Person (incl. Assault and Harassment) and Possession of Drugs.
+```{r results='asis'}
+library(kableExtra)
+library(formattable)
+
+data %>% 
+  group_by(Cat1, Cat2) %>%
+  summarise(Count = round(sum(Count)/1e3)) %>%
+  mutate(Count = formattable::color_tile('white', 'orange')(Count)) %>%
+  dplyr::rename(Count_thousands = Count) %>%
+  knitr::kable(format = 'html', align = c('l','l', 'r'), escape = FALSE) %>%
+  kableExtra::kable_styling(bootstrap_options = c('condensed', 'hover'), full_width = FALSE, position = "center") %>%
+  kableExtra::collapse_rows(columns = 1)
+```
+
+
+Let's quickly have a look at the evolution of these reported crimes over the last 24 months, to see if a trend emerges. I split the charts by major category.
+```{r fig.width=12}
+library(ggplot2)
+
+data %>%
+  group_by(Cat1, Month, Year, Date) %>%
+  dplyr::summarise(Count = sum(Count)) %>%
+  ggplot() +
+  geom_line(aes(Date, Count)) +
+  facet_wrap(~Cat1, scales = 'free')
+
+
+```
+
+The picture varies quite a bit depending on the category of crimes. The overall trend in reported burglaries and robberies seems to be increasing while criminal damages and drug-related crimes seem to be decreasing. 
+
+Also, since the beginning of 2018, there seems to be a sudden increase in reported criminal damages, violences against the person, theft and other notifiable offenses.
+
+## Crimes Location
+
+I figured it would be interesting to understand where those crimes occured within London. 
+
+For this I will use the `sf` package and some shapefiles found on the Internet to draw London boroughs, wards, and LSOAs. I will also add the Thames River to the map.
+Let's construct those objects.
+```{r results='hide'}
+library(sf)
+
+unzip("~/Dev/map-data/greater-london-latest-free.shp.zip", exdir = "~/Dev/map-data/osm-shp/")
+unzip("~/Dev/map-data/statistical-gis-boundaries-london.zip", exdir = "~/Dev/map-data/ldn-boundaries-shp/")
+crs <- 4326
+
+sf.waterways <- sf::st_read("~/Dev/map-data/osm-shp/gis.osm_water_a_free_1.shp") %>% 
+  filter(name %in% c("River Thames"))
+sf.borough <- sf::st_read("~/Dev/map-data/statistical-gis-boundaries-london/ESRI/London_Ward_CityMerged.shp") %>%
+  sf::st_transform(crs) %>% 
+  group_by(LB_GSS_CD, BOROUGH) %>% 
+  summarise() %>% 
+  ungroup()
+sf.wards <- sf::st_read("~/Dev/map-data/statistical-gis-boundaries-london/ESRI/London_Ward_CityMerged.shp") %>%
+  sf::st_transform(crs) %>% 
+  group_by(GSS_CODE, NAME) %>% 
+  summarise() %>% 
+  ungroup()
+sf.lsoa <- sf::st_read("~/Dev/map-data/statistical-gis-boundaries-london/ESRI/LSOA_2011_London_gen_MHW.shp") %>%
+  sf::st_transform(crs) %>% 
+  group_by(LSOA11CD, LAD11NM) %>% 
+  summarise() %>% 
+  ungroup()
+
+# Add ward name to LSOA simple features object
+lsoa_ward <- readr::read_csv("~/Dev/map-data/Lower_Layer_Super_Output_Area_2011_to_Ward_2015_Lookup_in_England_and_Wales.csv")
+sf.lsoa <- sf.lsoa %>% 
+  left_join(lsoa_ward %>% select(LSOA11CD, WD15CD, WD15NM), by = "LSOA11CD")
+
+```
+
+```{r include=FALSE}
+# Custom theme
+theme_map <- function(...){
+  bg_fill <- '#f5f5f2'
+  hrbrthemes::theme_ipsum(plot_title_size = 14) +
+  theme(
+    axis.text.x = element_blank(),
+    axis.text.y = element_blank(),
+    legend.background = element_rect(fill = bg_fill, color = NA),
+    legend.position = 'bottom',
+    legend.text = element_text(size = 11, hjust = 0.5),
+    legend.title = element_text(size = 11, hjust = 0.5),
+    panel.background = element_rect(fill = bg_fill, color = NA),
+    panel.spacing = unit(1, 'mm'),
+    panel.grid.major = element_line(colour = 'transparent'),
+    plot.background = element_rect(fill = bg_fill, color = NA), 
+    plot.caption = element_text(face = 'plain', hjust = 0, size = 10),
+    plot.margin = unit(c(1,1,1,1), 'mm'),
+    strip.text = element_text(vjust=1, size = 11),
+    ...)
+}
+
+# Custom legend guide
+guide_map <- function(barheight = unit(2, 'mm'), barwidth = unit(70, 'mm'), ...){
+  guide_colourbar(barheight = barheight,
+                barwidth = barwidth,
+                direction = 'horizontal',
+                draw.ulim = FALSE,
+                title.position = 'top',
+                title = 'Count')
+}
+```
+
+
+I would like to plot a map for each major category of crimes, so I create a function `plot_crimes`. Inside, I use `ggrepel`to create labels for wards with high level of crimes. This makes it easier for me to know which area is which. 
+```{r}
+library(ggrepel)
+
+plot_crimes <- function(cat1, annotate = TRUE){
+  
+  # Filter dataset according to major category if user input, or not if not
+  if(is.na(cat1)){ # Keep all crimes
+    data_filtered <- data %>%
+      group_by(Code) %>%
+      summarise(Count = sum(Count))
+    title <- "Crimes"
+  } else {
+    data_filtered <- data %>%
+      filter(Cat1 == cat1) %>%
+      group_by(Code, Cat1) %>%
+      summarise(Count = sum(Count))
+    title <- cat1
+  }
+  
+  
+  # Merge it with sf object, to have the geometry and crime data in one single data frame
+  to_plot <- sf.lsoa %>%
+    select(LSOA11CD, WD15NM, geometry) %>%
+    left_join(data_filtered, by = c('LSOA11CD'='Code')) %>% 
+    mutate(
+      CENTROID = map(geometry, st_centroid),
+      COORDS = map(CENTROID, st_coordinates),
+      COORDS_X = map_dbl(COORDS, 1),
+      COORDS_Y = map_dbl(COORDS, 2))
+  
+  # Create ggplot object
+  ldn_x <- c(-0.30, 0.044) # Limits to Central London
+  ldn_y <- c(51.41, 51.58) # Limits to Central London
+  plt <- ggplot(to_plot) +
+    geom_sf(aes(fill=Count), col='black', size=0.01, na.rm=TRUE) +
+    geom_sf(data=sf.borough, fill=NA, col='black', size=0.03) +
+    geom_sf(data=sf.wards, fill=NA, col='black', size=0.02) +
+    geom_sf(data=sf.waterways, fill="#002b80", alpha = 0.7, col=NA) +
+    coord_sf(crs = 4326, xlim = ldn_x, ylim = ldn_y) +
+    scale_fill_gradientn(colours=RColorBrewer::brewer.pal(9,"RdPu"), 
+                         guide = guide_map(), 
+                         na.value = '#f5f5f2') +
+    labs(caption = 'Source: London Datastore\nGraphic by Pierre-Ange Oliva',
+         title = glue::glue('{title} in Central London (Jun-16 to May-18)'),
+         x = "", y = "") +
+    theme_map()
+  
+  # Add annotations if necessary
+  if(annotate) {
+    # X and Y range of the map
+    x_range <- abs(Reduce("-", range(to_plot$COORDS_X)))
+    y_range <- abs(Reduce("-", range(to_plot$COORDS_Y)))
+    
+    # Filtered data frame which will be used as annotation dataset
+    # And add labelling params for some wards known to have high level of crimes
+    to_annotate <- to_plot %>%
+      arrange(desc(Count)) %>%
+      head(11) %>%
+      distinct(WD15NM, .keep_all = TRUE) %>%
+      filter(!WD15NM %in% c("Heathrow Villages", "Yiewsley", "Romford Town", "Fairfield", "Sutton Central")) %>% # too far from Central London
+      mutate(
+        nudge_x = case_when(
+          WD15NM %in% c("West End") ~ -0.05*x_range,
+          WD15NM %in% c("Knightsbridge and Belgravia") ~ -0.09*x_range,
+          WD15NM %in% c("Junction") ~ 0.03*x_range,
+          WD15NM %in% c("Coldharbour", "Bunhill") ~ 0.02*x_range,
+          WD15NM %in% c("Shepherd's Bush Green") ~ -0.02*x_range,
+          WD15NM %in% c("St James's") ~ 0.05*x_range,
+          WD15NM %in% c("Stratford and New Town") ~ 0*x_range,
+          WD15NM %in% c("Marylebone High Street", "Camden Town with Primrose Hill", "Holborn and Covent Garden") ~ -0.05*x_range,
+          WD15NM %in% c("Grove") ~ 0.05 * x_range,
+          WD15NM %in% c("Hoxton East & Shoreditch") ~ 0 * x_range,
+          TRUE ~ 0
+        ),
+        nudge_y = case_when(
+          WD15NM %in% c("West End") ~ -0.07*y_range,
+          WD15NM %in% c("Knightsbridge and Belgravia") ~ -0.04*y_range,
+          WD15NM %in% c("Junction") ~ 0.02*y_range,
+          WD15NM %in% c("Coldharbour", "Bunhill") ~ -0.02*y_range,
+          WD15NM %in% c("Shepherd's Bush Green") ~ 0.02*y_range,
+          WD15NM %in% c("St James's") ~ -0.05*y_range,
+          WD15NM %in% c("Stratford and New Town") ~ 0.03*y_range,
+          WD15NM %in% c("Marylebone High Street", "Camden Town with Primrose Hill", "Holborn and Covent Garden") ~ 0.05*y_range,
+          WD15NM %in% c("Grove") ~ 0.02 * y_range,
+          WD15NM %in% c("Hoxton East & Shoreditch") ~ 0.05 * y_range,
+          TRUE ~ 0
+        )
+      )
+    
+    plt <- plt + 
+      geom_text_repel(
+        data = to_annotate, 
+        mapping = aes(
+          x = COORDS_X,
+          y = COORDS_Y,
+          label = WD15NM
+        ),
+        nudge_x = to_annotate$nudge_x,
+        nudge_y = to_annotate$nudge_y,
+        force = 10,
+        size = 3,
+        min.segment.length = 0,
+        point.padding = NA,
+        segment.color = "grey50"
+      )
+  }
+  
+  plt
+}
+```
+
+Let's call this function for each type of crime, and display the maps!
+```{r}
+all <- plot_crimes(NA)
+burglary <- plot_crimes("Burglary")
+damage <- plot_crimes("Criminal Damage")
+drug <- plot_crimes("Drugs")
+robbery <- plot_crimes("Robbery")
+theft <- plot_crimes("Theft and Handling")
+violence <- plot_crimes("Violence Against the Person")
+```
+
+```{r echo=FALSE}
+all
+```
+
+```{r echo=FALSE}
+burglary
+```
+
+```{r echo=FALSE}
+damage
+```
+
+```{r echo=FALSE}
+drug
+```
+
+```{r echo=FALSE}
+robbery
+```
+
+```{r echo=FALSE}
+theft
+```
+
+```{r echo=FALSE}
+violence
+```
+
+Notably, very central London shows up in all maps as having a large number of reported crimes: not really surprising, and rather expected. 
+
+Also, all these maps tend to resemble one another, i.e similar regions are highlighted more than once: a region having a high level of crime in one particular category is likely to display a high level of crime in other categories too. 
+
+Having lived in London for a few years, most pinker regions follow my expectations. However, I was slightly surprised seeing Coldharbour and Grove as crime hubs. For the latter, after a quick research on the Internet, Coldharbour is actually located around Brixton station, so in fact it is not not really surprising to see it highlighted. Grove is located around Kingston upon Thames.

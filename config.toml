@@ -23,7 +23,7 @@ enableEmoji = true
 defaultContentLanguage = "en"
 
 [params.info]
-description = "Long gamma, or short theta?"
+description = "Some data-driven thoughts."
 title404 = "Nothing's here!"
 
 [params.assets]
