@@ -9,10 +9,50 @@ tags: [London, R, map]
 large_thumb: true
 draft: false
 output: 
-  html_document:
-    theme: simplex
+  blogdown::html_page:
+    dev: 'png'
+    highlight: tango
+    css: "../../css/custom.css"
 ---
 
+<style type="text/css">
+div.sourceCode { overflow-x: auto; }
+table.sourceCode, tr.sourceCode, td.lineNumbers, td.sourceCode {
+  margin: 0; padding: 0; vertical-align: baseline; border: none; }
+table.sourceCode { width: 100%; line-height: 100%; background-color: #f8f8f8; }
+td.lineNumbers { text-align: right; padding-right: 4px; padding-left: 4px; color: #aaaaaa; border-right: 1px solid #aaaaaa; }
+td.sourceCode { padding-left: 5px; }
+pre, code { background-color: #f8f8f8; }
+code > span.kw { color: #204a87; font-weight: bold; } /* Keyword */
+code > span.dt { color: #204a87; } /* DataType */
+code > span.dv { color: #0000cf; } /* DecVal */
+code > span.bn { color: #0000cf; } /* BaseN */
+code > span.fl { color: #0000cf; } /* Float */
+code > span.ch { color: #4e9a06; } /* Char */
+code > span.st { color: #4e9a06; } /* String */
+code > span.co { color: #8f5902; font-style: italic; } /* Comment */
+code > span.ot { color: #8f5902; } /* Other */
+code > span.al { color: #ef2929; } /* Alert */
+code > span.fu { color: #000000; } /* Function */
+code > span.er { color: #a40000; font-weight: bold; } /* Error */
+code > span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
+code > span.cn { color: #000000; } /* Constant */
+code > span.sc { color: #000000; } /* SpecialChar */
+code > span.vs { color: #4e9a06; } /* VerbatimString */
+code > span.ss { color: #4e9a06; } /* SpecialString */
+code > span.im { } /* Import */
+code > span.va { color: #000000; } /* Variable */
+code > span.cf { color: #204a87; font-weight: bold; } /* ControlFlow */
+code > span.op { color: #ce5c00; font-weight: bold; } /* Operator */
+code > span.pp { color: #8f5902; font-style: italic; } /* Preprocessor */
+code > span.ex { } /* Extension */
+code > span.at { color: #c4a000; } /* Attribute */
+code > span.do { color: #8f5902; font-weight: bold; font-style: italic; } /* Documentation */
+code > span.an { color: #8f5902; font-weight: bold; font-style: italic; } /* Annotation */
+code > span.cv { color: #8f5902; font-weight: bold; font-style: italic; } /* CommentVar */
+code > span.in { color: #8f5902; font-weight: bold; font-style: italic; } /* Information */
+</style>
+  <link rel="stylesheet" href="../../css/custom.css" type="text/css" />
 
 
 <div id="plan" class="section level2">
@@ -23,34 +63,34 @@ output:
 <div id="london-datastore" class="section level2">
 <h2>London Datastore</h2>
 <p>First, let’s download the data, save it in a file somewhere, and tidy it.</p>
-<pre class="r"><code>library(tidyverse)
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(tidyverse)
 
-# Download the data
-url &lt;- &quot;https://data.london.gov.uk/download/recorded_crime_summary/644a9e0d-75a3-4c3a-91ad-03d2a7cb8f8e/MPS%20LSOA%20Level%20Crime%20%28most%20recent%2024%20months%29.csv&quot;
-path &lt;- &quot;~/Dev/R/london-crimes/data.csv&quot;
-httr::GET(url, httr::write_disk(path, overwrite = TRUE))</code></pre>
-<pre class="r"><code>data &lt;- readr::read_csv(path) %&gt;%
-  dplyr::rename(Code = `LSOA Code`, Cat1 = `Major Category`, Cat2 = `Minor Category`) %&gt;%
-  tidyr::gather(Date, Count, -(Code:Cat2)) %&gt;%
-  dplyr::mutate_at(vars(Date), ~as.Date(paste0(., &quot;01&quot;), format = &quot;%Y%m%d&quot;)) %&gt;%
-  dplyr::mutate(Month = lubridate::month(Date), Year = lubridate::year(Date)) %&gt;%
-  dplyr::mutate_if(is.character, forcats::as_factor)</code></pre>
+<span class="co"># Download the data</span>
+url &lt;-<span class="st"> &quot;https://data.london.gov.uk/download/recorded_crime_summary/644a9e0d-75a3-4c3a-91ad-03d2a7cb8f8e/MPS%20LSOA%20Level%20Crime%20%28most%20recent%2024%20months%29.csv&quot;</span>
+path &lt;-<span class="st"> &quot;~/Dev/R/london-crimes/data.csv&quot;</span>
+httr<span class="op">::</span><span class="kw">GET</span>(url, httr<span class="op">::</span><span class="kw">write_disk</span>(path, <span class="dt">overwrite =</span> <span class="ot">TRUE</span>))</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">data &lt;-<span class="st"> </span>readr<span class="op">::</span><span class="kw">read_csv</span>(path) <span class="op">%&gt;%</span>
+<span class="st">  </span>dplyr<span class="op">::</span><span class="kw">rename</span>(<span class="dt">Code =</span> <span class="st">`</span><span class="dt">LSOA Code</span><span class="st">`</span>, <span class="dt">Cat1 =</span> <span class="st">`</span><span class="dt">Major Category</span><span class="st">`</span>, <span class="dt">Cat2 =</span> <span class="st">`</span><span class="dt">Minor Category</span><span class="st">`</span>) <span class="op">%&gt;%</span>
+<span class="st">  </span>tidyr<span class="op">::</span><span class="kw">gather</span>(Date, Count, <span class="op">-</span>(Code<span class="op">:</span>Cat2)) <span class="op">%&gt;%</span>
+<span class="st">  </span>dplyr<span class="op">::</span><span class="kw">mutate_at</span>(<span class="kw">vars</span>(Date), <span class="op">~</span><span class="kw">as.Date</span>(<span class="kw">paste0</span>(., <span class="st">&quot;01&quot;</span>), <span class="dt">format =</span> <span class="st">&quot;%Y%m%d&quot;</span>)) <span class="op">%&gt;%</span>
+<span class="st">  </span>dplyr<span class="op">::</span><span class="kw">mutate</span>(<span class="dt">Month =</span> lubridate<span class="op">::</span><span class="kw">month</span>(Date), <span class="dt">Year =</span> lubridate<span class="op">::</span><span class="kw">year</span>(Date)) <span class="op">%&gt;%</span>
+<span class="st">  </span>dplyr<span class="op">::</span><span class="kw">mutate_if</span>(is.character, forcats<span class="op">::</span>as_factor)</code></pre></div>
 </div>
 <div id="glimpse-at-the-data" class="section level2">
 <h2>Glimpse at the data</h2>
-<p>Let’s look at how crimes are classified, and which ones have been the most frequently committed in London over the last two years. More information on counting rules can be found <a href="https://www.gov.uk/government/publications/counting-rules-for-recorded-crime">here</a>. I use <code>kableExtra</code>and <code>formattable</code>to quickly show the crime categories most reported.</p>
+<p>Let’s look at how crimes are classified, and which ones have been most frequently committed in London over the last two years. More information on counting rules can be found <a href="https://www.gov.uk/government/publications/counting-rules-for-recorded-crime">here</a>. I use <code>kableExtra</code>and <code>formattable</code>to quickly show the crime categories most reported.</p>
 <p>At a glance, it looks like most frequent crimes in London are Residential Burglaries, Theft and Violences against the Person (incl. Assault and Harassment) and Possession of Drugs.</p>
-<pre class="r"><code>library(kableExtra)
-library(formattable)
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(kableExtra)
+<span class="kw">library</span>(formattable)
 
-data %&gt;% 
-  group_by(Cat1, Cat2) %&gt;%
-  summarise(Count = round(sum(Count)/1e3)) %&gt;%
-  mutate(Count = formattable::color_tile(&#39;white&#39;, &#39;orange&#39;)(Count)) %&gt;%
-  dplyr::rename(Count_thousands = Count) %&gt;%
-  knitr::kable(format = &#39;html&#39;, align = c(&#39;l&#39;,&#39;l&#39;, &#39;r&#39;), escape = FALSE) %&gt;%
-  kableExtra::kable_styling(bootstrap_options = c(&#39;condensed&#39;, &#39;hover&#39;), full_width = FALSE, position = &quot;center&quot;) %&gt;%
-  kableExtra::collapse_rows(columns = 1)</code></pre>
+data <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">group_by</span>(Cat1, Cat2) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">summarise</span>(<span class="dt">Count =</span> <span class="kw">round</span>(<span class="kw">sum</span>(Count)<span class="op">/</span><span class="fl">1e3</span>)) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Count =</span> formattable<span class="op">::</span><span class="kw">color_tile</span>(<span class="st">&#39;white&#39;</span>, <span class="st">&#39;orange&#39;</span>)(Count)) <span class="op">%&gt;%</span>
+<span class="st">  </span>dplyr<span class="op">::</span><span class="kw">rename</span>(<span class="dt">Count_thousands =</span> Count) <span class="op">%&gt;%</span>
+<span class="st">  </span>knitr<span class="op">::</span><span class="kw">kable</span>(<span class="dt">format =</span> <span class="st">&#39;html&#39;</span>, <span class="dt">align =</span> <span class="kw">c</span>(<span class="st">&#39;l&#39;</span>,<span class="st">&#39;l&#39;</span>, <span class="st">&#39;r&#39;</span>), <span class="dt">escape =</span> <span class="ot">FALSE</span>) <span class="op">%&gt;%</span>
+<span class="st">  </span>kableExtra<span class="op">::</span><span class="kw">kable_styling</span>(<span class="dt">bootstrap_options =</span> <span class="kw">c</span>(<span class="st">&#39;condensed&#39;</span>, <span class="st">&#39;hover&#39;</span>), <span class="dt">full_width =</span> <span class="ot">FALSE</span>, <span class="dt">position =</span> <span class="st">&quot;center&quot;</span>) <span class="op">%&gt;%</span>
+<span class="st">  </span>kableExtra<span class="op">::</span><span class="kw">collapse_rows</span>(<span class="dt">columns =</span> <span class="dv">1</span>)</code></pre></div>
 <table class="table table-condensed table-hover" style="width: auto !important; margin-left: auto; margin-right: auto;">
 <thead>
 <tr>
@@ -322,14 +362,14 @@ Wounding/GBH
 </tbody>
 </table>
 <p>Let’s quickly have a look at the evolution of these reported crimes over the last 24 months, to see if a trend emerges. I split the charts by major category.</p>
-<pre class="r"><code>library(ggplot2)
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(ggplot2)
 
-data %&gt;%
-  group_by(Cat1, Month, Year, Date) %&gt;%
-  dplyr::summarise(Count = sum(Count)) %&gt;%
-  ggplot() +
-  geom_line(aes(Date, Count)) +
-  facet_wrap(~Cat1, scales = &#39;free&#39;)</code></pre>
+data <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">group_by</span>(Cat1, Month, Year, Date) <span class="op">%&gt;%</span>
+<span class="st">  </span>dplyr<span class="op">::</span><span class="kw">summarise</span>(<span class="dt">Count =</span> <span class="kw">sum</span>(Count)) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">ggplot</span>() <span class="op">+</span>
+<span class="st">  </span><span class="kw">geom_line</span>(<span class="kw">aes</span>(Date, Count)) <span class="op">+</span>
+<span class="st">  </span><span class="kw">facet_wrap</span>(<span class="op">~</span>Cat1, <span class="dt">scales =</span> <span class="st">&#39;free&#39;</span>)</code></pre></div>
 <p><img src="/post/2018-06-26-london-recorded-crimes_files/figure-html/unnamed-chunk-4-1.png" width="100%" style="display: block; margin: auto;" /></p>
 <p>The picture varies quite a bit depending on the category of crimes. The overall trend in reported burglaries and robberies seems to be increasing while criminal damages and drug-related crimes seem to be decreasing.</p>
 <p>Also, since the beginning of 2018, there seems to be a sudden increase in reported criminal damages, violences against the person, theft and other notifiable offenses.</p>
@@ -338,151 +378,151 @@ data %&gt;%
 <h2>Crimes Location</h2>
 <p>I figured it would be interesting to understand where those crimes occured within London.</p>
 <p>For this I will use the <code>sf</code> package and some shapefiles found on the Internet to draw London boroughs, wards, and LSOAs. I will also add the Thames River to the map. Let’s construct those objects.</p>
-<pre class="r"><code>library(sf)
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(sf)
 
-unzip(&quot;~/Dev/map-data/greater-london-latest-free.shp.zip&quot;, exdir = &quot;~/Dev/map-data/osm-shp/&quot;)
-unzip(&quot;~/Dev/map-data/statistical-gis-boundaries-london.zip&quot;, exdir = &quot;~/Dev/map-data/ldn-boundaries-shp/&quot;)
-crs &lt;- 4326
+<span class="kw">unzip</span>(<span class="st">&quot;~/Dev/map-data/greater-london-latest-free.shp.zip&quot;</span>, <span class="dt">exdir =</span> <span class="st">&quot;~/Dev/map-data/osm-shp/&quot;</span>)
+<span class="kw">unzip</span>(<span class="st">&quot;~/Dev/map-data/statistical-gis-boundaries-london.zip&quot;</span>, <span class="dt">exdir =</span> <span class="st">&quot;~/Dev/map-data/ldn-boundaries-shp/&quot;</span>)
+crs &lt;-<span class="st"> </span><span class="dv">4326</span>
 
-sf.waterways &lt;- sf::st_read(&quot;~/Dev/map-data/osm-shp/gis.osm_water_a_free_1.shp&quot;) %&gt;% 
-  filter(name %in% c(&quot;River Thames&quot;))
-sf.borough &lt;- sf::st_read(&quot;~/Dev/map-data/statistical-gis-boundaries-london/ESRI/London_Ward_CityMerged.shp&quot;) %&gt;%
-  sf::st_transform(crs) %&gt;% 
-  group_by(LB_GSS_CD, BOROUGH) %&gt;% 
-  summarise() %&gt;% 
-  ungroup()
-sf.wards &lt;- sf::st_read(&quot;~/Dev/map-data/statistical-gis-boundaries-london/ESRI/London_Ward_CityMerged.shp&quot;) %&gt;%
-  sf::st_transform(crs) %&gt;% 
-  group_by(GSS_CODE, NAME) %&gt;% 
-  summarise() %&gt;% 
-  ungroup()
-sf.lsoa &lt;- sf::st_read(&quot;~/Dev/map-data/statistical-gis-boundaries-london/ESRI/LSOA_2011_London_gen_MHW.shp&quot;) %&gt;%
-  sf::st_transform(crs) %&gt;% 
-  group_by(LSOA11CD, LAD11NM) %&gt;% 
-  summarise() %&gt;% 
-  ungroup()
+sf.waterways &lt;-<span class="st"> </span>sf<span class="op">::</span><span class="kw">st_read</span>(<span class="st">&quot;~/Dev/map-data/osm-shp/gis.osm_water_a_free_1.shp&quot;</span>) <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">filter</span>(name <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;River Thames&quot;</span>))
+sf.borough &lt;-<span class="st"> </span>sf<span class="op">::</span><span class="kw">st_read</span>(<span class="st">&quot;~/Dev/map-data/statistical-gis-boundaries-london/ESRI/London_Ward_CityMerged.shp&quot;</span>) <span class="op">%&gt;%</span>
+<span class="st">  </span>sf<span class="op">::</span><span class="kw">st_transform</span>(crs) <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">group_by</span>(LB_GSS_CD, BOROUGH) <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">summarise</span>() <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">ungroup</span>()
+sf.wards &lt;-<span class="st"> </span>sf<span class="op">::</span><span class="kw">st_read</span>(<span class="st">&quot;~/Dev/map-data/statistical-gis-boundaries-london/ESRI/London_Ward_CityMerged.shp&quot;</span>) <span class="op">%&gt;%</span>
+<span class="st">  </span>sf<span class="op">::</span><span class="kw">st_transform</span>(crs) <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">group_by</span>(GSS_CODE, NAME) <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">summarise</span>() <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">ungroup</span>()
+sf.lsoa &lt;-<span class="st"> </span>sf<span class="op">::</span><span class="kw">st_read</span>(<span class="st">&quot;~/Dev/map-data/statistical-gis-boundaries-london/ESRI/LSOA_2011_London_gen_MHW.shp&quot;</span>) <span class="op">%&gt;%</span>
+<span class="st">  </span>sf<span class="op">::</span><span class="kw">st_transform</span>(crs) <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">group_by</span>(LSOA11CD, LAD11NM) <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">summarise</span>() <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">ungroup</span>()
 
-# Add ward name to LSOA simple features object
-lsoa_ward &lt;- readr::read_csv(&quot;~/Dev/map-data/Lower_Layer_Super_Output_Area_2011_to_Ward_2015_Lookup_in_England_and_Wales.csv&quot;)
-sf.lsoa &lt;- sf.lsoa %&gt;% 
-  left_join(lsoa_ward %&gt;% select(LSOA11CD, WD15CD, WD15NM), by = &quot;LSOA11CD&quot;)</code></pre>
+<span class="co"># Add ward name to LSOA simple features object</span>
+lsoa_ward &lt;-<span class="st"> </span>readr<span class="op">::</span><span class="kw">read_csv</span>(<span class="st">&quot;~/Dev/map-data/Lower_Layer_Super_Output_Area_2011_to_Ward_2015_Lookup_in_England_and_Wales.csv&quot;</span>)
+sf.lsoa &lt;-<span class="st"> </span>sf.lsoa <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">left_join</span>(lsoa_ward <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">select</span>(LSOA11CD, WD15CD, WD15NM), <span class="dt">by =</span> <span class="st">&quot;LSOA11CD&quot;</span>)</code></pre></div>
 <p>I would like to plot a map for each major category of crimes, so I create a function <code>plot_crimes</code>. Inside, I use <code>ggrepel</code>to create labels for wards with high level of crimes. This makes it easier for me to know which area is which.</p>
-<pre class="r"><code>library(ggrepel)
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(ggrepel)
 
-plot_crimes &lt;- function(cat1, annotate = TRUE){
+plot_crimes &lt;-<span class="st"> </span><span class="cf">function</span>(cat1, <span class="dt">annotate =</span> <span class="ot">TRUE</span>){
   
-  # Filter dataset according to major category if user input, or not if not
-  if(is.na(cat1)){ # Keep all crimes
-    data_filtered &lt;- data %&gt;%
-      group_by(Code) %&gt;%
-      summarise(Count = sum(Count))
-    title &lt;- &quot;Crimes&quot;
-  } else {
-    data_filtered &lt;- data %&gt;%
-      filter(Cat1 == cat1) %&gt;%
-      group_by(Code, Cat1) %&gt;%
-      summarise(Count = sum(Count))
-    title &lt;- cat1
+  <span class="co"># Filter dataset according to major category if user input, or not if not</span>
+  <span class="cf">if</span>(<span class="kw">is.na</span>(cat1)){ <span class="co"># Keep all crimes</span>
+    data_filtered &lt;-<span class="st"> </span>data <span class="op">%&gt;%</span>
+<span class="st">      </span><span class="kw">group_by</span>(Code) <span class="op">%&gt;%</span>
+<span class="st">      </span><span class="kw">summarise</span>(<span class="dt">Count =</span> <span class="kw">sum</span>(Count))
+    title &lt;-<span class="st"> &quot;Crimes&quot;</span>
+  } <span class="cf">else</span> {
+    data_filtered &lt;-<span class="st"> </span>data <span class="op">%&gt;%</span>
+<span class="st">      </span><span class="kw">filter</span>(Cat1 <span class="op">==</span><span class="st"> </span>cat1) <span class="op">%&gt;%</span>
+<span class="st">      </span><span class="kw">group_by</span>(Code, Cat1) <span class="op">%&gt;%</span>
+<span class="st">      </span><span class="kw">summarise</span>(<span class="dt">Count =</span> <span class="kw">sum</span>(Count))
+    title &lt;-<span class="st"> </span>cat1
   }
   
   
-  # Merge it with sf object, to have the geometry and crime data in one single data frame
-  to_plot &lt;- sf.lsoa %&gt;%
-    select(LSOA11CD, WD15NM, geometry) %&gt;%
-    left_join(data_filtered, by = c(&#39;LSOA11CD&#39;=&#39;Code&#39;)) %&gt;% 
-    mutate(
-      CENTROID = map(geometry, st_centroid),
-      COORDS = map(CENTROID, st_coordinates),
-      COORDS_X = map_dbl(COORDS, 1),
-      COORDS_Y = map_dbl(COORDS, 2))
+  <span class="co"># Merge it with sf object, to have the geometry and crime data in one single data frame</span>
+  to_plot &lt;-<span class="st"> </span>sf.lsoa <span class="op">%&gt;%</span>
+<span class="st">    </span><span class="kw">select</span>(LSOA11CD, WD15NM, geometry) <span class="op">%&gt;%</span>
+<span class="st">    </span><span class="kw">left_join</span>(data_filtered, <span class="dt">by =</span> <span class="kw">c</span>(<span class="st">&#39;LSOA11CD&#39;</span>=<span class="st">&#39;Code&#39;</span>)) <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">    </span><span class="kw">mutate</span>(
+      <span class="dt">CENTROID =</span> <span class="kw">map</span>(geometry, st_centroid),
+      <span class="dt">COORDS =</span> <span class="kw">map</span>(CENTROID, st_coordinates),
+      <span class="dt">COORDS_X =</span> <span class="kw">map_dbl</span>(COORDS, <span class="dv">1</span>),
+      <span class="dt">COORDS_Y =</span> <span class="kw">map_dbl</span>(COORDS, <span class="dv">2</span>))
   
-  # Create ggplot object
-  ldn_x &lt;- c(-0.30, 0.044) # Limits to Central London
-  ldn_y &lt;- c(51.41, 51.58) # Limits to Central London
-  plt &lt;- ggplot(to_plot) +
-    geom_sf(aes(fill=Count), col=&#39;black&#39;, size=0.01, na.rm=TRUE) +
-    geom_sf(data=sf.borough, fill=NA, col=&#39;black&#39;, size=0.03) +
-    geom_sf(data=sf.wards, fill=NA, col=&#39;black&#39;, size=0.02) +
-    geom_sf(data=sf.waterways, fill=&quot;#002b80&quot;, alpha = 0.7, col=NA) +
-    coord_sf(crs = 4326, xlim = ldn_x, ylim = ldn_y) +
-    scale_fill_gradientn(colours=RColorBrewer::brewer.pal(9,&quot;RdPu&quot;), 
-                         guide = guide_map(), 
-                         na.value = &#39;#f5f5f2&#39;) +
-    labs(caption = &#39;Source: London Datastore\nGraphic by Pierre-Ange Oliva&#39;,
-         title = glue::glue(&#39;{title} in Central London (Jun-16 to May-18)&#39;),
-         x = &quot;&quot;, y = &quot;&quot;) +
-    theme_map()
+  <span class="co"># Create ggplot object</span>
+  ldn_x &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="op">-</span><span class="fl">0.30</span>, <span class="fl">0.044</span>) <span class="co"># Limits to Central London</span>
+  ldn_y &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="fl">51.41</span>, <span class="fl">51.58</span>) <span class="co"># Limits to Central London</span>
+  plt &lt;-<span class="st"> </span><span class="kw">ggplot</span>(to_plot) <span class="op">+</span>
+<span class="st">    </span><span class="kw">geom_sf</span>(<span class="kw">aes</span>(<span class="dt">fill=</span>Count), <span class="dt">col=</span><span class="st">&#39;black&#39;</span>, <span class="dt">size=</span><span class="fl">0.01</span>, <span class="dt">na.rm=</span><span class="ot">TRUE</span>) <span class="op">+</span>
+<span class="st">    </span><span class="kw">geom_sf</span>(<span class="dt">data=</span>sf.borough, <span class="dt">fill=</span><span class="ot">NA</span>, <span class="dt">col=</span><span class="st">&#39;black&#39;</span>, <span class="dt">size=</span><span class="fl">0.03</span>) <span class="op">+</span>
+<span class="st">    </span><span class="kw">geom_sf</span>(<span class="dt">data=</span>sf.wards, <span class="dt">fill=</span><span class="ot">NA</span>, <span class="dt">col=</span><span class="st">&#39;black&#39;</span>, <span class="dt">size=</span><span class="fl">0.02</span>) <span class="op">+</span>
+<span class="st">    </span><span class="kw">geom_sf</span>(<span class="dt">data=</span>sf.waterways, <span class="dt">fill=</span><span class="st">&quot;#002b80&quot;</span>, <span class="dt">alpha =</span> <span class="fl">0.7</span>, <span class="dt">col=</span><span class="ot">NA</span>) <span class="op">+</span>
+<span class="st">    </span><span class="kw">coord_sf</span>(<span class="dt">crs =</span> <span class="dv">4326</span>, <span class="dt">xlim =</span> ldn_x, <span class="dt">ylim =</span> ldn_y) <span class="op">+</span>
+<span class="st">    </span><span class="kw">scale_fill_gradientn</span>(<span class="dt">colours=</span>RColorBrewer<span class="op">::</span><span class="kw">brewer.pal</span>(<span class="dv">9</span>,<span class="st">&quot;RdPu&quot;</span>), 
+                         <span class="dt">guide =</span> <span class="kw">guide_map</span>(), 
+                         <span class="dt">na.value =</span> <span class="st">&#39;#f5f5f2&#39;</span>) <span class="op">+</span>
+<span class="st">    </span><span class="kw">labs</span>(<span class="dt">caption =</span> <span class="st">&#39;Source: London Datastore</span><span class="ch">\n</span><span class="st">Graphic by Pierre-Ange Oliva&#39;</span>,
+         <span class="dt">title =</span> glue<span class="op">::</span><span class="kw">glue</span>(<span class="st">&#39;{title} in Central London (Jun-16 to May-18)&#39;</span>),
+         <span class="dt">x =</span> <span class="st">&quot;&quot;</span>, <span class="dt">y =</span> <span class="st">&quot;&quot;</span>) <span class="op">+</span>
+<span class="st">    </span><span class="kw">theme_map</span>()
   
-  # Add annotations if necessary
-  if(annotate) {
-    # X and Y range of the map
-    x_range &lt;- abs(Reduce(&quot;-&quot;, range(to_plot$COORDS_X)))
-    y_range &lt;- abs(Reduce(&quot;-&quot;, range(to_plot$COORDS_Y)))
+  <span class="co"># Add annotations if necessary</span>
+  <span class="cf">if</span>(annotate) {
+    <span class="co"># X and Y range of the map</span>
+    x_range &lt;-<span class="st"> </span><span class="kw">abs</span>(<span class="kw">Reduce</span>(<span class="st">&quot;-&quot;</span>, <span class="kw">range</span>(to_plot<span class="op">$</span>COORDS_X)))
+    y_range &lt;-<span class="st"> </span><span class="kw">abs</span>(<span class="kw">Reduce</span>(<span class="st">&quot;-&quot;</span>, <span class="kw">range</span>(to_plot<span class="op">$</span>COORDS_Y)))
     
-    # Filtered data frame which will be used as annotation dataset
-    # And add labelling params for some wards known to have high level of crimes
-    to_annotate &lt;- to_plot %&gt;%
-      arrange(desc(Count)) %&gt;%
-      head(11) %&gt;%
-      distinct(WD15NM, .keep_all = TRUE) %&gt;%
-      filter(!WD15NM %in% c(&quot;Heathrow Villages&quot;, &quot;Yiewsley&quot;, &quot;Romford Town&quot;, &quot;Fairfield&quot;, &quot;Sutton Central&quot;)) %&gt;% # too far from Central London
-      mutate(
-        nudge_x = case_when(
-          WD15NM %in% c(&quot;West End&quot;) ~ -0.05*x_range,
-          WD15NM %in% c(&quot;Knightsbridge and Belgravia&quot;) ~ -0.09*x_range,
-          WD15NM %in% c(&quot;Junction&quot;) ~ 0.03*x_range,
-          WD15NM %in% c(&quot;Coldharbour&quot;, &quot;Bunhill&quot;) ~ 0.02*x_range,
-          WD15NM %in% c(&quot;Shepherd&#39;s Bush Green&quot;) ~ -0.02*x_range,
-          WD15NM %in% c(&quot;St James&#39;s&quot;) ~ 0.05*x_range,
-          WD15NM %in% c(&quot;Stratford and New Town&quot;) ~ 0*x_range,
-          WD15NM %in% c(&quot;Marylebone High Street&quot;, &quot;Camden Town with Primrose Hill&quot;, &quot;Holborn and Covent Garden&quot;) ~ -0.05*x_range,
-          WD15NM %in% c(&quot;Grove&quot;) ~ 0.05 * x_range,
-          WD15NM %in% c(&quot;Hoxton East &amp; Shoreditch&quot;) ~ 0 * x_range,
-          TRUE ~ 0
+    <span class="co"># Filtered data frame which will be used as annotation dataset</span>
+    <span class="co"># And add labelling params for some wards known to have high level of crimes</span>
+    to_annotate &lt;-<span class="st"> </span>to_plot <span class="op">%&gt;%</span>
+<span class="st">      </span><span class="kw">arrange</span>(<span class="kw">desc</span>(Count)) <span class="op">%&gt;%</span>
+<span class="st">      </span><span class="kw">head</span>(<span class="dv">11</span>) <span class="op">%&gt;%</span>
+<span class="st">      </span><span class="kw">distinct</span>(WD15NM, <span class="dt">.keep_all =</span> <span class="ot">TRUE</span>) <span class="op">%&gt;%</span>
+<span class="st">      </span><span class="kw">filter</span>(<span class="op">!</span>WD15NM <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Heathrow Villages&quot;</span>, <span class="st">&quot;Yiewsley&quot;</span>, <span class="st">&quot;Romford Town&quot;</span>, <span class="st">&quot;Fairfield&quot;</span>, <span class="st">&quot;Sutton Central&quot;</span>)) <span class="op">%&gt;%</span><span class="st"> </span><span class="co"># too far from Central London</span>
+<span class="st">      </span><span class="kw">mutate</span>(
+        <span class="dt">nudge_x =</span> <span class="kw">case_when</span>(
+          WD15NM <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;West End&quot;</span>) <span class="op">~</span><span class="st"> </span><span class="op">-</span><span class="fl">0.05</span><span class="op">*</span>x_range,
+          WD15NM <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Knightsbridge and Belgravia&quot;</span>) <span class="op">~</span><span class="st"> </span><span class="op">-</span><span class="fl">0.09</span><span class="op">*</span>x_range,
+          WD15NM <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Junction&quot;</span>) <span class="op">~</span><span class="st"> </span><span class="fl">0.03</span><span class="op">*</span>x_range,
+          WD15NM <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Coldharbour&quot;</span>, <span class="st">&quot;Bunhill&quot;</span>) <span class="op">~</span><span class="st"> </span><span class="fl">0.02</span><span class="op">*</span>x_range,
+          WD15NM <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Shepherd&#39;s Bush Green&quot;</span>) <span class="op">~</span><span class="st"> </span><span class="op">-</span><span class="fl">0.02</span><span class="op">*</span>x_range,
+          WD15NM <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;St James&#39;s&quot;</span>) <span class="op">~</span><span class="st"> </span><span class="fl">0.05</span><span class="op">*</span>x_range,
+          WD15NM <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Stratford and New Town&quot;</span>) <span class="op">~</span><span class="st"> </span><span class="dv">0</span><span class="op">*</span>x_range,
+          WD15NM <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Marylebone High Street&quot;</span>, <span class="st">&quot;Camden Town with Primrose Hill&quot;</span>, <span class="st">&quot;Holborn and Covent Garden&quot;</span>) <span class="op">~</span><span class="st"> </span><span class="op">-</span><span class="fl">0.05</span><span class="op">*</span>x_range,
+          WD15NM <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Grove&quot;</span>) <span class="op">~</span><span class="st"> </span><span class="fl">0.05</span> <span class="op">*</span><span class="st"> </span>x_range,
+          WD15NM <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Hoxton East &amp; Shoreditch&quot;</span>) <span class="op">~</span><span class="st"> </span><span class="dv">0</span> <span class="op">*</span><span class="st"> </span>x_range,
+          <span class="ot">TRUE</span> <span class="op">~</span><span class="st"> </span><span class="dv">0</span>
         ),
-        nudge_y = case_when(
-          WD15NM %in% c(&quot;West End&quot;) ~ -0.07*y_range,
-          WD15NM %in% c(&quot;Knightsbridge and Belgravia&quot;) ~ -0.04*y_range,
-          WD15NM %in% c(&quot;Junction&quot;) ~ 0.02*y_range,
-          WD15NM %in% c(&quot;Coldharbour&quot;, &quot;Bunhill&quot;) ~ -0.02*y_range,
-          WD15NM %in% c(&quot;Shepherd&#39;s Bush Green&quot;) ~ 0.02*y_range,
-          WD15NM %in% c(&quot;St James&#39;s&quot;) ~ -0.05*y_range,
-          WD15NM %in% c(&quot;Stratford and New Town&quot;) ~ 0.03*y_range,
-          WD15NM %in% c(&quot;Marylebone High Street&quot;, &quot;Camden Town with Primrose Hill&quot;, &quot;Holborn and Covent Garden&quot;) ~ 0.05*y_range,
-          WD15NM %in% c(&quot;Grove&quot;) ~ 0.02 * y_range,
-          WD15NM %in% c(&quot;Hoxton East &amp; Shoreditch&quot;) ~ 0.05 * y_range,
-          TRUE ~ 0
+        <span class="dt">nudge_y =</span> <span class="kw">case_when</span>(
+          WD15NM <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;West End&quot;</span>) <span class="op">~</span><span class="st"> </span><span class="op">-</span><span class="fl">0.07</span><span class="op">*</span>y_range,
+          WD15NM <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Knightsbridge and Belgravia&quot;</span>) <span class="op">~</span><span class="st"> </span><span class="op">-</span><span class="fl">0.04</span><span class="op">*</span>y_range,
+          WD15NM <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Junction&quot;</span>) <span class="op">~</span><span class="st"> </span><span class="fl">0.02</span><span class="op">*</span>y_range,
+          WD15NM <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Coldharbour&quot;</span>, <span class="st">&quot;Bunhill&quot;</span>) <span class="op">~</span><span class="st"> </span><span class="op">-</span><span class="fl">0.02</span><span class="op">*</span>y_range,
+          WD15NM <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Shepherd&#39;s Bush Green&quot;</span>) <span class="op">~</span><span class="st"> </span><span class="fl">0.02</span><span class="op">*</span>y_range,
+          WD15NM <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;St James&#39;s&quot;</span>) <span class="op">~</span><span class="st"> </span><span class="op">-</span><span class="fl">0.05</span><span class="op">*</span>y_range,
+          WD15NM <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Stratford and New Town&quot;</span>) <span class="op">~</span><span class="st"> </span><span class="fl">0.03</span><span class="op">*</span>y_range,
+          WD15NM <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Marylebone High Street&quot;</span>, <span class="st">&quot;Camden Town with Primrose Hill&quot;</span>, <span class="st">&quot;Holborn and Covent Garden&quot;</span>) <span class="op">~</span><span class="st"> </span><span class="fl">0.05</span><span class="op">*</span>y_range,
+          WD15NM <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Grove&quot;</span>) <span class="op">~</span><span class="st"> </span><span class="fl">0.02</span> <span class="op">*</span><span class="st"> </span>y_range,
+          WD15NM <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Hoxton East &amp; Shoreditch&quot;</span>) <span class="op">~</span><span class="st"> </span><span class="fl">0.05</span> <span class="op">*</span><span class="st"> </span>y_range,
+          <span class="ot">TRUE</span> <span class="op">~</span><span class="st"> </span><span class="dv">0</span>
         )
       )
     
-    plt &lt;- plt + 
-      geom_text_repel(
-        data = to_annotate, 
-        mapping = aes(
-          x = COORDS_X,
-          y = COORDS_Y,
-          label = WD15NM
+    plt &lt;-<span class="st"> </span>plt <span class="op">+</span><span class="st"> </span>
+<span class="st">      </span><span class="kw">geom_text_repel</span>(
+        <span class="dt">data =</span> to_annotate, 
+        <span class="dt">mapping =</span> <span class="kw">aes</span>(
+          <span class="dt">x =</span> COORDS_X,
+          <span class="dt">y =</span> COORDS_Y,
+          <span class="dt">label =</span> WD15NM
         ),
-        nudge_x = to_annotate$nudge_x,
-        nudge_y = to_annotate$nudge_y,
-        force = 10,
-        size = 3,
-        min.segment.length = 0,
-        point.padding = NA,
-        segment.color = &quot;grey50&quot;
+        <span class="dt">nudge_x =</span> to_annotate<span class="op">$</span>nudge_x,
+        <span class="dt">nudge_y =</span> to_annotate<span class="op">$</span>nudge_y,
+        <span class="dt">force =</span> <span class="dv">10</span>,
+        <span class="dt">size =</span> <span class="dv">3</span>,
+        <span class="dt">min.segment.length =</span> <span class="dv">0</span>,
+        <span class="dt">point.padding =</span> <span class="ot">NA</span>,
+        <span class="dt">segment.color =</span> <span class="st">&quot;grey50&quot;</span>
       )
   }
   
   plt
-}</code></pre>
+}</code></pre></div>
 <p>Let’s call this function for each type of crime, and display the maps!</p>
-<pre class="r"><code>all &lt;- plot_crimes(NA)
-burglary &lt;- plot_crimes(&quot;Burglary&quot;)
-damage &lt;- plot_crimes(&quot;Criminal Damage&quot;)
-drug &lt;- plot_crimes(&quot;Drugs&quot;)
-robbery &lt;- plot_crimes(&quot;Robbery&quot;)
-theft &lt;- plot_crimes(&quot;Theft and Handling&quot;)
-violence &lt;- plot_crimes(&quot;Violence Against the Person&quot;)</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">all &lt;-<span class="st"> </span><span class="kw">plot_crimes</span>(<span class="ot">NA</span>)
+burglary &lt;-<span class="st"> </span><span class="kw">plot_crimes</span>(<span class="st">&quot;Burglary&quot;</span>)
+damage &lt;-<span class="st"> </span><span class="kw">plot_crimes</span>(<span class="st">&quot;Criminal Damage&quot;</span>)
+drug &lt;-<span class="st"> </span><span class="kw">plot_crimes</span>(<span class="st">&quot;Drugs&quot;</span>)
+robbery &lt;-<span class="st"> </span><span class="kw">plot_crimes</span>(<span class="st">&quot;Robbery&quot;</span>)
+theft &lt;-<span class="st"> </span><span class="kw">plot_crimes</span>(<span class="st">&quot;Theft and Handling&quot;</span>)
+violence &lt;-<span class="st"> </span><span class="kw">plot_crimes</span>(<span class="st">&quot;Violence Against the Person&quot;</span>)</code></pre></div>
 <p><img src="/post/2018-06-26-london-recorded-crimes_files/figure-html/unnamed-chunk-9-1.png" width="100%" style="display: block; margin: auto;" /></p>
 <p><img src="/post/2018-06-26-london-recorded-crimes_files/figure-html/unnamed-chunk-10-1.png" width="100%" style="display: block; margin: auto;" /></p>
 <p><img src="/post/2018-06-26-london-recorded-crimes_files/figure-html/unnamed-chunk-11-1.png" width="100%" style="display: block; margin: auto;" /></p>

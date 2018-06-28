@@ -9,9 +9,12 @@ tags: [London, R, map]
 large_thumb: true
 draft: false
 output: 
-  html_document:
-    theme: simplex
+  blogdown::html_page:
+    dev: 'png'
+    highlight: tango
+    css: "../../css/custom.css"
 ---
+
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(message = FALSE, 
@@ -57,7 +60,7 @@ data <- readr::read_csv(path) %>%
 
 ## Glimpse at the data
 
-Let's look at how crimes are classified, and which ones have been the most frequently committed in London over the last two years. 
+Let's look at how crimes are classified, and which ones have been most frequently committed in London over the last two years. 
 More information on counting rules can be found [here](https://www.gov.uk/government/publications/counting-rules-for-recorded-crime). I use `kableExtra`and `formattable`to quickly show the crime categories most reported. 
 
 At a glance, it looks like most frequent crimes in London are Residential Burglaries, Theft and Violences against the Person (incl. Assault and Harassment) and Possession of Drugs.
