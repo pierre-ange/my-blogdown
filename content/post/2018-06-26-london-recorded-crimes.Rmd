@@ -15,7 +15,6 @@ output:
     css: "../../css/custom.css"
 ---
 
-
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(message = FALSE, 
                       warning = FALSE, 
@@ -30,11 +29,19 @@ knitr::opts_chunk$set(message = FALSE,
 
 ```
 
-## Plan
+# Plan
 
-A count of recorded crimes is available on the London datastore. The data is available at LSOA level (Lower Super Output Area, basically a UK geographic hierarchy designed to improve the reporting of small area statistics by being as consistent in population size as possible: minimum population is 1000, average is 1500) and monthly over the last 24 months.
+A count of recorded crimes is available on the [London Datastore](https://data.london.gov.uk/). 
+
+The data is available at borough, ward and LSOA levels monthly over the last 24 months in one file, and since 2008 in another set of files. For those unaware (including myself...), LSOA stands for Lower Super Output Area; basically a UK geographic hierarchy designed to be as consistent in population size as possible (minimum population of 1000, average of 1500) to improve the reporting of small area statistics.
 
 I am always interested in this kind of statistics so I will look at the dataset in this blog post.
+
+First, I will look at the most recent data (over the last 24 months) to get a sense of what the crime situation in London looks like today. The data will be plotted on a map to idenfity areas where crimes are most frequently occuring.
+
+Then, I will focus my attention on the historic dataset, covering a period from January 2008 till today,  to understand how crime has evolved in different parts of London since then (10 years ago!).
+
+# Crimes today (June-16 to May-18)
 
 ## London Datastore
 
@@ -46,16 +53,16 @@ library(tidyverse)
 # Download the data
 url <- "https://data.london.gov.uk/download/recorded_crime_summary/644a9e0d-75a3-4c3a-91ad-03d2a7cb8f8e/MPS%20LSOA%20Level%20Crime%20%28most%20recent%2024%20months%29.csv"
 path <- "~/Dev/R/london-crimes/data.csv"
-httr::GET(url, httr::write_disk(path, overwrite = TRUE))
+#httr::GET(url, httr::write_disk(path, overwrite = TRUE))
 ```
 
 ```{r}
 data <- readr::read_csv(path) %>%
-  dplyr::rename(Code = `LSOA Code`, Cat1 = `Major Category`, Cat2 = `Minor Category`) %>%
+  rename(Code = `LSOA Code`, Cat1 = `Major Category`, Cat2 = `Minor Category`) %>%
   tidyr::gather(Date, Count, -(Code:Cat2)) %>%
-  dplyr::mutate_at(vars(Date), ~as.Date(paste0(., "01"), format = "%Y%m%d")) %>%
-  dplyr::mutate(Month = lubridate::month(Date), Year = lubridate::year(Date)) %>%
-  dplyr::mutate_if(is.character, forcats::as_factor)
+  mutate_at(vars(Date), ~as.Date(paste0(., "01"), format = "%Y%m%d")) %>%
+  mutate(Month = lubridate::month(Date), Year = lubridate::year(Date)) %>%
+  mutate_if(is.character, forcats::as_factor)
 ```
 
 ## Glimpse at the data
@@ -88,21 +95,21 @@ data %>%
   dplyr::summarise(Count = sum(Count)) %>%
   ggplot() +
   geom_line(aes(Date, Count)) +
-  facet_wrap(~Cat1, scales = 'free')
-
-
+  facet_wrap(~Cat1, scales = 'free') +
+  hrbrthemes::theme_ipsum(plot_title_size = 12) +
+  scale_y_continuous(labels = scales::comma)
 ```
 
 The picture varies quite a bit depending on the category of crimes. The overall trend in reported burglaries and robberies seems to be increasing while criminal damages and drug-related crimes seem to be decreasing. 
 
 Also, since the beginning of 2018, there seems to be a sudden increase in reported criminal damages, violences against the person, theft and other notifiable offenses.
 
-## Crimes Location
+## Crime Locations
 
-I figured it would be interesting to understand where those crimes occured within London. 
+I figured it would be interesting to understand where in London those crimes occured. 
 
-For this I will use the `sf` package and some shapefiles found on the Internet to draw London boroughs, wards, and LSOAs. I will also add the Thames River to the map.
-Let's construct those objects.
+For this I use the `sf` package and some shapefiles found on the Internet (cf earlier posts) to draw London boroughs, wards, and LSOAs. I also add the Thames River to the map.
+
 ```{r results='hide'}
 library(sf)
 
@@ -129,21 +136,23 @@ sf.lsoa <- sf::st_read("~/Dev/map-data/statistical-gis-boundaries-london/ESRI/LS
   ungroup()
 
 # Add ward name to LSOA simple features object
-lsoa_ward <- readr::read_csv("~/Dev/map-data/Lower_Layer_Super_Output_Area_2011_to_Ward_2015_Lookup_in_England_and_Wales.csv")
+lsoa_ward <- readr::read_csv("~/Dev/map-data/Lower_Layer_Super_Output_Area_2011_to_Ward_2015_Lookup_in_England_and_Wales.csv") %>% 
+  rename(Ward = WD15NM)
 sf.lsoa <- sf.lsoa %>% 
-  left_join(lsoa_ward %>% select(LSOA11CD, WD15CD, WD15NM), by = "LSOA11CD")
+  left_join(lsoa_ward %>% select(LSOA11CD, WD15CD, Ward), by = "LSOA11CD")
 
 ```
 
 ```{r include=FALSE}
 # Custom theme
 theme_map <- function(...){
-  bg_fill <- '#f5f5f2'
+  bg_fill <- "white" #'#f5f5f2'
   hrbrthemes::theme_ipsum(plot_title_size = 14) +
   theme(
     axis.text.x = element_blank(),
     axis.text.y = element_blank(),
     legend.background = element_rect(fill = bg_fill, color = NA),
+    legend.box.spacing = unit(0, 'mm'),
     legend.position = 'bottom',
     legend.text = element_text(size = 11, hjust = 0.5),
     legend.title = element_text(size = 11, hjust = 0.5),
@@ -152,26 +161,82 @@ theme_map <- function(...){
     panel.grid.major = element_line(colour = 'transparent'),
     plot.background = element_rect(fill = bg_fill, color = NA), 
     plot.caption = element_text(face = 'plain', hjust = 0, size = 10),
-    plot.margin = unit(c(1,1,1,1), 'mm'),
+    plot.margin = unit(c(1,7,1,1), 'mm'),
     strip.text = element_text(vjust=1, size = 11),
     ...)
 }
 
 # Custom legend guide
-guide_map <- function(barheight = unit(2, 'mm'), barwidth = unit(70, 'mm'), ...){
+guide_map <- function(barheight = unit(2, 'mm'), barwidth = unit(70, 'mm'), title = "Count", ...){
   guide_colourbar(barheight = barheight,
                 barwidth = barwidth,
                 direction = 'horizontal',
                 draw.ulim = FALSE,
                 title.position = 'top',
-                title = 'Count')
+                title = title)
 }
 ```
 
 
-I would like to plot a map for each major category of crimes, so I create a function `plot_crimes`. Inside, I use `ggrepel`to create labels for wards with high level of crimes. This makes it easier for me to know which area is which. 
+I would like to plot a map for each major crime category, so I create a function `plot_crimes`. Inside, the `ggrepel` package is used to create labels for wards with high level of crimes (happens inside the `annotations` function). This makes it easier for me to know which area is which. Note that I use ward names despite plotting LSOA data (one-to-many relation between the two) because LSOA names are just a code added to the corresponding ward name, hence would be more confusing than helping.
+
 ```{r}
 library(ggrepel)
+
+ldn_x <- c(-0.30, 0.044) # Limits to Central London
+ldn_y <- c(51.41, 51.58) # Limits to Central London
+
+annotations <- function(data, value_col, n=11){
+  # X and Y ranges of the map
+  x_range <- abs(Reduce("-", range(data$COORDS_X)))
+  y_range <- abs(Reduce("-", range(data$COORDS_Y)))
+  
+  # Filtered data frame which will be used as annotation dataset
+  # And add labelling params for some wards known to have high level of crimes
+  df_annotate <- data %>%
+    arrange(desc(abs(!!sym(value_col)))) %>%
+    head(n) %>%
+    distinct(Ward, .keep_all = TRUE) %>%
+    filter(!Ward %in% c("Heathrow Villages", "Yiewsley", "Romford Town", "Fairfield", "Sutton Central",
+                        "Colindale", "Becontree", "Upminster", "Christchurch",
+                        "Blendon and Penhill", "Belmont")) %>% # too far from Central London
+    mutate(
+      nudge_x = case_when(
+        Ward %in% c("Knightsbridge and Belgravia") ~ -0.09*x_range,
+        Ward %in% c("West End", "Marylebone High Street", "Camden Town with Primrose Hill", "Holborn and Covent Garden") ~ -0.05*x_range,
+        Ward %in% c("Shepherd's Bush Green", "Sands End", "Faraday") ~ -0.02*x_range,
+        Ward %in% c("Coldharbour", "Bunhill") ~ 0.02*x_range,
+        Ward %in% c("Junction", "Tokyngton", "St Pancras and Somers Town", "Homerton", "Canary Wharf", "Peninsula") ~ 0.03*x_range,
+        Ward %in% c("St James's", "Grove") ~ 0.05*x_range,
+        TRUE ~ 0
+      ),
+      nudge_y = case_when(
+        Ward %in% c("West End") ~ -0.07*y_range,
+        Ward %in% c("Knightsbridge and Belgravia", "St James's", "Peninsula") ~ -0.04*y_range,
+        Ward %in% c("Coldharbour", "Bunhill", "Hornsey", "Faraday", "New Cross", "Rotherhithe") ~ -0.02*y_range,
+        Ward %in% c("Junction", "Tokyngton", "Homerton", "Shepherd's Bush Green", "Grove") ~ 0.02*y_range,
+        Ward %in% c("Stratford and New Town", "Sands End", "St Pancras and Somers Town") ~ 0.03*y_range,
+        Ward %in% c("Marylebone High Street", "Camden Town with Primrose Hill", "Holborn and Covent Garden", "Hoxton East & Shoreditch", "Bromley Town", "Canary Wharf") ~ 0.05*y_range,
+        TRUE ~ 0
+      )
+    )
+  
+    geom_text_repel(
+      data = df_annotate, 
+      mapping = aes(
+        x = COORDS_X,
+        y = COORDS_Y,
+        label = Ward
+      ),
+      nudge_x = df_annotate$nudge_x,
+      nudge_y = df_annotate$nudge_y,
+      force = 10,
+      size = 3,
+      min.segment.length = 0,
+      point.padding = NA,
+      segment.color = "grey50"
+    )
+}
 
 plot_crimes <- function(cat1, annotate = TRUE){
   
@@ -192,7 +257,7 @@ plot_crimes <- function(cat1, annotate = TRUE){
   
   # Merge it with sf object, to have the geometry and crime data in one single data frame
   to_plot <- sf.lsoa %>%
-    select(LSOA11CD, WD15NM, geometry) %>%
+    select(LSOA11CD, Ward, geometry) %>%
     left_join(data_filtered, by = c('LSOA11CD'='Code')) %>% 
     mutate(
       CENTROID = map(geometry, st_centroid),
@@ -201,8 +266,6 @@ plot_crimes <- function(cat1, annotate = TRUE){
       COORDS_Y = map_dbl(COORDS, 2))
   
   # Create ggplot object
-  ldn_x <- c(-0.30, 0.044) # Limits to Central London
-  ldn_y <- c(51.41, 51.58) # Limits to Central London
   plt <- ggplot(to_plot) +
     geom_sf(aes(fill=Count), col='black', size=0.01, na.rm=TRUE) +
     geom_sf(data=sf.borough, fill=NA, col='black', size=0.03) +
@@ -219,69 +282,14 @@ plot_crimes <- function(cat1, annotate = TRUE){
   
   # Add annotations if necessary
   if(annotate) {
-    # X and Y range of the map
-    x_range <- abs(Reduce("-", range(to_plot$COORDS_X)))
-    y_range <- abs(Reduce("-", range(to_plot$COORDS_Y)))
-    
-    # Filtered data frame which will be used as annotation dataset
-    # And add labelling params for some wards known to have high level of crimes
-    to_annotate <- to_plot %>%
-      arrange(desc(Count)) %>%
-      head(11) %>%
-      distinct(WD15NM, .keep_all = TRUE) %>%
-      filter(!WD15NM %in% c("Heathrow Villages", "Yiewsley", "Romford Town", "Fairfield", "Sutton Central")) %>% # too far from Central London
-      mutate(
-        nudge_x = case_when(
-          WD15NM %in% c("West End") ~ -0.05*x_range,
-          WD15NM %in% c("Knightsbridge and Belgravia") ~ -0.09*x_range,
-          WD15NM %in% c("Junction") ~ 0.03*x_range,
-          WD15NM %in% c("Coldharbour", "Bunhill") ~ 0.02*x_range,
-          WD15NM %in% c("Shepherd's Bush Green") ~ -0.02*x_range,
-          WD15NM %in% c("St James's") ~ 0.05*x_range,
-          WD15NM %in% c("Stratford and New Town") ~ 0*x_range,
-          WD15NM %in% c("Marylebone High Street", "Camden Town with Primrose Hill", "Holborn and Covent Garden") ~ -0.05*x_range,
-          WD15NM %in% c("Grove") ~ 0.05 * x_range,
-          WD15NM %in% c("Hoxton East & Shoreditch") ~ 0 * x_range,
-          TRUE ~ 0
-        ),
-        nudge_y = case_when(
-          WD15NM %in% c("West End") ~ -0.07*y_range,
-          WD15NM %in% c("Knightsbridge and Belgravia") ~ -0.04*y_range,
-          WD15NM %in% c("Junction") ~ 0.02*y_range,
-          WD15NM %in% c("Coldharbour", "Bunhill") ~ -0.02*y_range,
-          WD15NM %in% c("Shepherd's Bush Green") ~ 0.02*y_range,
-          WD15NM %in% c("St James's") ~ -0.05*y_range,
-          WD15NM %in% c("Stratford and New Town") ~ 0.03*y_range,
-          WD15NM %in% c("Marylebone High Street", "Camden Town with Primrose Hill", "Holborn and Covent Garden") ~ 0.05*y_range,
-          WD15NM %in% c("Grove") ~ 0.02 * y_range,
-          WD15NM %in% c("Hoxton East & Shoreditch") ~ 0.05 * y_range,
-          TRUE ~ 0
-        )
-      )
-    
-    plt <- plt + 
-      geom_text_repel(
-        data = to_annotate, 
-        mapping = aes(
-          x = COORDS_X,
-          y = COORDS_Y,
-          label = WD15NM
-        ),
-        nudge_x = to_annotate$nudge_x,
-        nudge_y = to_annotate$nudge_y,
-        force = 10,
-        size = 3,
-        min.segment.length = 0,
-        point.padding = NA,
-        segment.color = "grey50"
-      )
+    plt <- plt + annotations(to_plot, "Count")
   }
   
   plt
 }
 ```
 
-Let's call this function for each type of crime, and display the maps!
+Let's call this function for every crime category, and display the resulting maps!
 ```{r}
 all <- plot_crimes(NA)
 burglary <- plot_crimes("Burglary")
@@ -325,3 +333,191 @@ Notably, very central London shows up in all maps as having a large number of re
 Also, all these maps tend to resemble one another, i.e similar regions are highlighted more than once: a region having a high level of crime in one particular category is likely to display a high level of crime in other categories too. 
 
 Having lived in London for a few years, most pinker regions follow my expectations. However, I was slightly surprised seeing Coldharbour and Grove as crime hubs. For the latter, after a quick research on the Internet, Coldharbour is actually located around Brixton station, so in fact it is not not really surprising to see it highlighted. Grove is located around Kingston upon Thames.
+
+# How has it evolved?
+
+Let's now download the historic data from the same webpage, and tidy it. 
+
+The format is exactly the same as previously, great! The only noticeable thing is that the data in this file is available until December 2016. I need to add the data from the previous file to get everything till May 2018 (making sure not to double count the period from June-16 to Dec-16)
+
+```{r}
+# Download the data
+url <- "https://files.datapress.com/london/dataset/recorded_crime_summary/2017-05-04T07:20:40.38/MPS_LSOA_Level_Crime_Historic.csv"
+path <- "~/Dev/R/london-crimes/MPS_LSOA_Level_Crime_Historic.csv"
+#httr::GET(url, httr::write_disk(path, overwrite = TRUE))
+
+# Tidy it
+data_histo <- readr::read_csv(path) %>%
+  rename(Code = `LSOA Code`, Cat1 = `Major Category`, Cat2 = `Minor Category`) %>%
+  tidyr::gather(Date, Count, -(Code:Cat2)) %>%
+  mutate_at(vars(Date), ~as.Date(paste0(., "01"), format = "%Y%m%d")) %>%
+  mutate(Month = lubridate::month(Date), Year = lubridate::year(Date)) %>%
+  mutate_if(is.character, forcats::as_factor)
+
+# Bind dates from June-16 to May-18, making sure to not overlap
+recent_dates <- unique(data$Date)
+overlap <- recent_dates[recent_dates %in% unique(data_histo$Date)]
+
+data_histo <- data_histo %>%
+  filter(!Date %in% overlap) %>% 
+  bind_rows(data) %>%
+  left_join(lsoa_ward %>% select(LSOA11CD, Ward), 
+            by = c("Code" = "LSOA11CD")) %>%
+  mutate_if(is.character, forcats::as_factor) %>% 
+  filter(Borough != "City of London") # Because not available in recent months
+
+```
+
+Now the first thing I want to do is to make sure (at least visually) there is no obvious oddity in the data, such as a month missing or having a lot less or more data than expected. Let's plot the overall count by month over the period to visually inspect it.
+
+```{r}
+data_histo %>%
+  group_by(Date) %>%
+  summarise(Count = sum(Count)) %>%
+  ggplot(aes(Date, Count)) +
+  geom_point() +
+  geom_smooth() +
+  hrbrthemes::theme_ipsum(plot_title_size = 12) +
+  scale_y_continuous(labels = scales::comma) +
+  labs(title = "Number of crimes recorded in London since 2008",
+       caption = "Source: London Datastore\nGraphic by Pierre-Ange Oliva")
+```
+
+Nothing odd stands out from the plot, so good to go! Interesting to see how the trend was on the decrease from 2008 to 2014 (despite a slight increase around mid-end 2011: London riots?) and then suddenly picked up in 2014 and kept increasing since ...
+
+
+Despite having data available at a monthly periodicity, I now decide to group everything by year: having it yearly over a ten-year period should be enough for my purposes, not really interested in seeing monthly data for now. Plus, it probably removes some possible noise, and seasonality (is there seasonality in crimes? Mmmmh ...)
+
+Since data is available up until May-2018, and that I don't want to have a truncated year of 2018, I will for now remove 2018 from the data frame.
+
+```{r}
+data_y <- data_histo %>%
+  group_by(Code, Borough, Ward, Cat1, Cat2, Year) %>%
+  summarise(Count = sum(Count)) %>%
+  filter(Year != 2018)
+```
+
+Also, I think that LSOA definition changes every now and then, to deal with the increase or decrease in population (given that LSOA are defined as to be consistent in terms of population). Let's make sure the LSOAs that are in the dataset in 2017 are available in 2008 as well... A quick way to check is to count the number of LSOAs with a number of crimes equal to zero.
+
+```{r results='asis'}
+data_y %>% 
+  group_by(Year, Code) %>% 
+  summarise(Count = sum(Count)) %>% 
+  filter(Count == 0) %>% 
+  count(Year) %>% 
+  knitr::kable(format = 'html', align = c('l', 'r')) %>% 
+  kableExtra::kable_styling(bootstrap_options = c('condensed', 'hover'), full_width = FALSE, position = "center")
+```
+
+Bingo, the definition of some LSOAs probably changed in 2011 ( [and indeed it did](https://data.london.gov.uk/dataset/lsoa-atlas) ). I will then compare the change in crimes between 2012 to 2017, and not earlier.
+
+Now there exist quite a few different ways of representing changes in some variable. Mike Bostock (creator of D3) summarizes it very well in [this article](https://beta.observablehq.com/@mbostock/methods-of-comparison-compared). I choose here to display the change in crimes by considering:
+
++ the absolute difference $b-a$ 
++ the log ratio $log(\frac{b}{a})$ 
+
+
+```{r}
+changes <- data_y %>% 
+  group_by(Borough, Ward, Code, Year) %>% 
+  summarise_at(vars(Count), sum) %>%
+  filter(Year %in% c(2012, 2017)) %>% 
+  ungroup() %>% 
+  group_by(Code) %>%
+  arrange(Year) %>%
+  mutate(Diff_Abs = Count-lag(Count)) %>% # Absolute difference
+  mutate(Diff_Log = log(Count/lag(Count))) # Log Ratio
+```
+
+Let's join the `sf` data frame to it, to prepare for the mapping part.
+```{r}
+to_plot_2 <- sf.lsoa %>%
+  select(LSOA11CD, geometry) %>%
+  left_join(filter(changes, Year == 2017), by = c('LSOA11CD'='Code')) %>% 
+  mutate(
+    CENTROID = map(geometry, st_centroid),
+    COORDS = map(CENTROID, st_coordinates),
+    COORDS_X = map_dbl(COORDS, 1),
+    COORDS_Y = map_dbl(COORDS, 2))
+```
+
+Let's start by creating some base variables for the map: base map, colour coding, and maximum values.
+```{r}
+# Colour coding
+colours <- c("#0B296D","#3B9CCF", "#CEE2F4", "white", "#FFCAB3", "#FF0A00","#750000")
+values_abs <- c(0, 0.2, 0.4, 0.5, 0.6, 0.8, 1)
+values_log <- c(0, 0.1, 0.3, 0.5, 0.7, 0.9, 1)
+
+# Maximum values
+max_diff_abs <- max(abs(to_plot_2$Diff_Abs), na.rm = TRUE)
+max_diff_log <- max(abs(to_plot_2$Diff_Log), na.rm = TRUE)
+
+# Base map
+base <- ggplot() +
+  geom_sf(data=sf.borough, fill=NA, col='black', size=0.03) +
+  geom_sf(data=sf.wards, fill=NA, col='black', size=0.02) +
+  geom_sf(data=sf.waterways, fill="#696969", col=NA) +
+  labs(caption = 'Source: London Datastore\nGraphic by Pierre-Ange Oliva',
+       title = glue::glue('Change in Crimes in London, 2012–2017'),
+       x = "", y = "") +
+  theme_map()
+```
+
+Now on to the absolute changes! I also display a table below the map with the large changes.
+```{r}
+plt_absolute <- base +
+  geom_sf(data = to_plot_2, aes(fill=Diff_Abs), col='black', size=0.01, na.rm=TRUE) +
+  coord_sf(crs = 4326, xlim = ldn_x, ylim = ldn_y) +
+  scale_fill_gradientn(colours = colours,
+                       values = values_abs,
+                       limits = c(-max_diff_abs,max_diff_abs),
+                       na.value = '#f5f5f2',
+                       breaks = c(-max_diff_abs,-1e3,0,1e3,max_diff_abs),
+                       guide = guide_map(title = "Absolute change in crimes")) + 
+  annotations(to_plot_2, "Diff_Abs", 15)
+plt_absolute
+```
+
+
+```{r echo=FALSE}
+changes %>% 
+  filter(Code %in% (arrange(changes, desc(abs(Diff_Abs))) %>% head(15))$Code) %>% 
+  select(-Diff_Abs, -Diff_Log) %>% 
+  spread(Year, Count) %>% 
+  mutate(Diff_Abs = `2017` - `2012`,
+         Ratio = `2017`/`2012`) %>% 
+  arrange(Diff_Abs) %>% 
+  knitr::kable(format = 'html', align = c(rep('l',3), rep('r',4))) %>% 
+  kableExtra::kable_styling(bootstrap_options = c('condensed', 'hover'), full_width = FALSE, position = "center")
+```
+
+
+And the log ratios:
+```{r}
+plt_log <- base +
+  geom_sf(data = to_plot_2, aes(fill=Diff_Log), col='black', size=0.01, na.rm=TRUE) +
+  coord_sf(crs = 4326, xlim = ldn_x, ylim = ldn_y) +
+  scale_fill_gradientn(colours = colours,
+                       values = values_log,
+                       limits = c(-max_diff_log,max_diff_log),
+                       na.value = '#f5f5f2',
+                       breaks= log(c(0.2,0.5,1,2,5)),
+                       labels = paste0(c(0.2,0.5,1,2,5),"x"),
+                       guide = guide_map(title = "Relative change in crimes")) + 
+  annotations(to_plot_2, "Diff_Log", 15)
+plt_log
+```
+
+```{r echo=FALSE}
+changes %>% 
+  filter(Code %in% (arrange(changes, desc(abs(Diff_Log))) %>% head(15))$Code) %>% 
+  select(-Diff_Abs, -Diff_Log) %>% 
+  spread(Year, Count) %>% 
+  mutate(Diff_Abs = `2017` - `2012`,
+         Ratio = `2017`/`2012`) %>% 
+  arrange(Ratio) %>% 
+  knitr::kable(format = 'html', align = c(rep('l',3), rep('r',4))) %>% 
+  kableExtra::kable_styling(bootstrap_options = c('condensed', 'hover'), full_width = FALSE, position = "center")
+```
+
+The difference between the two maps is quite dramatic. I am not sure which one is best, even in the context of this dataset. Both are informative by showing a different kind of changes.

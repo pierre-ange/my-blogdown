@@ -55,11 +55,16 @@ code > span.in { color: #8f5902; font-weight: bold; font-style: italic; } /* Inf
   <link rel="stylesheet" href="../../css/custom.css" type="text/css" />
 
 
-<div id="plan" class="section level2">
-<h2>Plan</h2>
-<p>A count of recorded crimes is available on the London datastore. The data is available at LSOA level (Lower Super Output Area, basically a UK geographic hierarchy designed to improve the reporting of small area statistics by being as consistent in population size as possible: minimum population is 1000, average is 1500) and monthly over the last 24 months.</p>
+<div id="plan" class="section level1">
+<h1>Plan</h1>
+<p>A count of recorded crimes is available on the <a href="https://data.london.gov.uk/">London Datastore</a>.</p>
+<p>The data is available at borough, ward and LSOA levels monthly over the last 24 months in one file, and since 2008 in another set of files. For those unaware (including myself…), LSOA stands for Lower Super Output Area; basically a UK geographic hierarchy designed to be as consistent in population size as possible (minimum population of 1000, average of 1500) to improve the reporting of small area statistics.</p>
 <p>I am always interested in this kind of statistics so I will look at the dataset in this blog post.</p>
+<p>First, I will look at the most recent data (over the last 24 months) to get a sense of what the crime situation in London looks like today. The data will be plotted on a map to idenfity areas where crimes are most frequently occuring.</p>
+<p>Then, I will focus my attention on the historic dataset, covering a period from January 2008 till today, to understand how crime has evolved in different parts of London since then (10 years ago!).</p>
 </div>
+<div id="crimes-today-june-16-to-may-18" class="section level1">
+<h1>Crimes today (June-16 to May-18)</h1>
 <div id="london-datastore" class="section level2">
 <h2>London Datastore</h2>
 <p>First, let’s download the data, save it in a file somewhere, and tidy it.</p>
@@ -68,13 +73,13 @@ code > span.in { color: #8f5902; font-weight: bold; font-style: italic; } /* Inf
 <span class="co"># Download the data</span>
 url &lt;-<span class="st"> &quot;https://data.london.gov.uk/download/recorded_crime_summary/644a9e0d-75a3-4c3a-91ad-03d2a7cb8f8e/MPS%20LSOA%20Level%20Crime%20%28most%20recent%2024%20months%29.csv&quot;</span>
 path &lt;-<span class="st"> &quot;~/Dev/R/london-crimes/data.csv&quot;</span>
-httr<span class="op">::</span><span class="kw">GET</span>(url, httr<span class="op">::</span><span class="kw">write_disk</span>(path, <span class="dt">overwrite =</span> <span class="ot">TRUE</span>))</code></pre></div>
+<span class="co">#httr::GET(url, httr::write_disk(path, overwrite = TRUE))</span></code></pre></div>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">data &lt;-<span class="st"> </span>readr<span class="op">::</span><span class="kw">read_csv</span>(path) <span class="op">%&gt;%</span>
-<span class="st">  </span>dplyr<span class="op">::</span><span class="kw">rename</span>(<span class="dt">Code =</span> <span class="st">`</span><span class="dt">LSOA Code</span><span class="st">`</span>, <span class="dt">Cat1 =</span> <span class="st">`</span><span class="dt">Major Category</span><span class="st">`</span>, <span class="dt">Cat2 =</span> <span class="st">`</span><span class="dt">Minor Category</span><span class="st">`</span>) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">rename</span>(<span class="dt">Code =</span> <span class="st">`</span><span class="dt">LSOA Code</span><span class="st">`</span>, <span class="dt">Cat1 =</span> <span class="st">`</span><span class="dt">Major Category</span><span class="st">`</span>, <span class="dt">Cat2 =</span> <span class="st">`</span><span class="dt">Minor Category</span><span class="st">`</span>) <span class="op">%&gt;%</span>
 <span class="st">  </span>tidyr<span class="op">::</span><span class="kw">gather</span>(Date, Count, <span class="op">-</span>(Code<span class="op">:</span>Cat2)) <span class="op">%&gt;%</span>
-<span class="st">  </span>dplyr<span class="op">::</span><span class="kw">mutate_at</span>(<span class="kw">vars</span>(Date), <span class="op">~</span><span class="kw">as.Date</span>(<span class="kw">paste0</span>(., <span class="st">&quot;01&quot;</span>), <span class="dt">format =</span> <span class="st">&quot;%Y%m%d&quot;</span>)) <span class="op">%&gt;%</span>
-<span class="st">  </span>dplyr<span class="op">::</span><span class="kw">mutate</span>(<span class="dt">Month =</span> lubridate<span class="op">::</span><span class="kw">month</span>(Date), <span class="dt">Year =</span> lubridate<span class="op">::</span><span class="kw">year</span>(Date)) <span class="op">%&gt;%</span>
-<span class="st">  </span>dplyr<span class="op">::</span><span class="kw">mutate_if</span>(is.character, forcats<span class="op">::</span>as_factor)</code></pre></div>
+<span class="st">  </span><span class="kw">mutate_at</span>(<span class="kw">vars</span>(Date), <span class="op">~</span><span class="kw">as.Date</span>(<span class="kw">paste0</span>(., <span class="st">&quot;01&quot;</span>), <span class="dt">format =</span> <span class="st">&quot;%Y%m%d&quot;</span>)) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Month =</span> lubridate<span class="op">::</span><span class="kw">month</span>(Date), <span class="dt">Year =</span> lubridate<span class="op">::</span><span class="kw">year</span>(Date)) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">mutate_if</span>(is.character, forcats<span class="op">::</span>as_factor)</code></pre></div>
 </div>
 <div id="glimpse-at-the-data" class="section level2">
 <h2>Glimpse at the data</h2>
@@ -369,15 +374,17 @@ data <span class="op">%&gt;%</span>
 <span class="st">  </span>dplyr<span class="op">::</span><span class="kw">summarise</span>(<span class="dt">Count =</span> <span class="kw">sum</span>(Count)) <span class="op">%&gt;%</span>
 <span class="st">  </span><span class="kw">ggplot</span>() <span class="op">+</span>
 <span class="st">  </span><span class="kw">geom_line</span>(<span class="kw">aes</span>(Date, Count)) <span class="op">+</span>
-<span class="st">  </span><span class="kw">facet_wrap</span>(<span class="op">~</span>Cat1, <span class="dt">scales =</span> <span class="st">&#39;free&#39;</span>)</code></pre></div>
+<span class="st">  </span><span class="kw">facet_wrap</span>(<span class="op">~</span>Cat1, <span class="dt">scales =</span> <span class="st">&#39;free&#39;</span>) <span class="op">+</span>
+<span class="st">  </span>hrbrthemes<span class="op">::</span><span class="kw">theme_ipsum</span>(<span class="dt">plot_title_size =</span> <span class="dv">12</span>) <span class="op">+</span>
+<span class="st">  </span><span class="kw">scale_y_continuous</span>(<span class="dt">labels =</span> scales<span class="op">::</span>comma)</code></pre></div>
 <p><img src="/post/2018-06-26-london-recorded-crimes_files/figure-html/unnamed-chunk-4-1.png" width="100%" style="display: block; margin: auto;" /></p>
 <p>The picture varies quite a bit depending on the category of crimes. The overall trend in reported burglaries and robberies seems to be increasing while criminal damages and drug-related crimes seem to be decreasing.</p>
 <p>Also, since the beginning of 2018, there seems to be a sudden increase in reported criminal damages, violences against the person, theft and other notifiable offenses.</p>
 </div>
-<div id="crimes-location" class="section level2">
-<h2>Crimes Location</h2>
-<p>I figured it would be interesting to understand where those crimes occured within London.</p>
-<p>For this I will use the <code>sf</code> package and some shapefiles found on the Internet to draw London boroughs, wards, and LSOAs. I will also add the Thames River to the map. Let’s construct those objects.</p>
+<div id="crime-locations" class="section level2">
+<h2>Crime Locations</h2>
+<p>I figured it would be interesting to understand where in London those crimes occured.</p>
+<p>For this I use the <code>sf</code> package and some shapefiles found on the Internet (cf earlier posts) to draw London boroughs, wards, and LSOAs. I also add the Thames River to the map.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(sf)
 
 <span class="kw">unzip</span>(<span class="st">&quot;~/Dev/map-data/greater-london-latest-free.shp.zip&quot;</span>, <span class="dt">exdir =</span> <span class="st">&quot;~/Dev/map-data/osm-shp/&quot;</span>)
@@ -403,11 +410,67 @@ sf.lsoa &lt;-<span class="st"> </span>sf<span class="op">::</span><span class="k
 <span class="st">  </span><span class="kw">ungroup</span>()
 
 <span class="co"># Add ward name to LSOA simple features object</span>
-lsoa_ward &lt;-<span class="st"> </span>readr<span class="op">::</span><span class="kw">read_csv</span>(<span class="st">&quot;~/Dev/map-data/Lower_Layer_Super_Output_Area_2011_to_Ward_2015_Lookup_in_England_and_Wales.csv&quot;</span>)
+lsoa_ward &lt;-<span class="st"> </span>readr<span class="op">::</span><span class="kw">read_csv</span>(<span class="st">&quot;~/Dev/map-data/Lower_Layer_Super_Output_Area_2011_to_Ward_2015_Lookup_in_England_and_Wales.csv&quot;</span>) <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">rename</span>(<span class="dt">Ward =</span> WD15NM)
 sf.lsoa &lt;-<span class="st"> </span>sf.lsoa <span class="op">%&gt;%</span><span class="st"> </span>
-<span class="st">  </span><span class="kw">left_join</span>(lsoa_ward <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">select</span>(LSOA11CD, WD15CD, WD15NM), <span class="dt">by =</span> <span class="st">&quot;LSOA11CD&quot;</span>)</code></pre></div>
-<p>I would like to plot a map for each major category of crimes, so I create a function <code>plot_crimes</code>. Inside, I use <code>ggrepel</code>to create labels for wards with high level of crimes. This makes it easier for me to know which area is which.</p>
+<span class="st">  </span><span class="kw">left_join</span>(lsoa_ward <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">select</span>(LSOA11CD, WD15CD, Ward), <span class="dt">by =</span> <span class="st">&quot;LSOA11CD&quot;</span>)</code></pre></div>
+<p>I would like to plot a map for each major crime category, so I create a function <code>plot_crimes</code>. Inside, the <code>ggrepel</code> package is used to create labels for wards with high level of crimes (happens inside the <code>annotations</code> function). This makes it easier for me to know which area is which. Note that I use ward names despite plotting LSOA data (one-to-many relation between the two) because LSOA names are just a code added to the corresponding ward name, hence would be more confusing than helping.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(ggrepel)
+
+ldn_x &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="op">-</span><span class="fl">0.30</span>, <span class="fl">0.044</span>) <span class="co"># Limits to Central London</span>
+ldn_y &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="fl">51.41</span>, <span class="fl">51.58</span>) <span class="co"># Limits to Central London</span>
+
+annotations &lt;-<span class="st"> </span><span class="cf">function</span>(data, value_col, <span class="dt">n=</span><span class="dv">11</span>){
+  <span class="co"># X and Y ranges of the map</span>
+  x_range &lt;-<span class="st"> </span><span class="kw">abs</span>(<span class="kw">Reduce</span>(<span class="st">&quot;-&quot;</span>, <span class="kw">range</span>(data<span class="op">$</span>COORDS_X)))
+  y_range &lt;-<span class="st"> </span><span class="kw">abs</span>(<span class="kw">Reduce</span>(<span class="st">&quot;-&quot;</span>, <span class="kw">range</span>(data<span class="op">$</span>COORDS_Y)))
+  
+  <span class="co"># Filtered data frame which will be used as annotation dataset</span>
+  <span class="co"># And add labelling params for some wards known to have high level of crimes</span>
+  df_annotate &lt;-<span class="st"> </span>data <span class="op">%&gt;%</span>
+<span class="st">    </span><span class="kw">arrange</span>(<span class="kw">desc</span>(<span class="kw">abs</span>(<span class="op">!!</span><span class="kw">sym</span>(value_col)))) <span class="op">%&gt;%</span>
+<span class="st">    </span><span class="kw">head</span>(n) <span class="op">%&gt;%</span>
+<span class="st">    </span><span class="kw">distinct</span>(Ward, <span class="dt">.keep_all =</span> <span class="ot">TRUE</span>) <span class="op">%&gt;%</span>
+<span class="st">    </span><span class="kw">filter</span>(<span class="op">!</span>Ward <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Heathrow Villages&quot;</span>, <span class="st">&quot;Yiewsley&quot;</span>, <span class="st">&quot;Romford Town&quot;</span>, <span class="st">&quot;Fairfield&quot;</span>, <span class="st">&quot;Sutton Central&quot;</span>,
+                        <span class="st">&quot;Colindale&quot;</span>, <span class="st">&quot;Becontree&quot;</span>, <span class="st">&quot;Upminster&quot;</span>, <span class="st">&quot;Christchurch&quot;</span>,
+                        <span class="st">&quot;Blendon and Penhill&quot;</span>, <span class="st">&quot;Belmont&quot;</span>)) <span class="op">%&gt;%</span><span class="st"> </span><span class="co"># too far from Central London</span>
+<span class="st">    </span><span class="kw">mutate</span>(
+      <span class="dt">nudge_x =</span> <span class="kw">case_when</span>(
+        Ward <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Knightsbridge and Belgravia&quot;</span>) <span class="op">~</span><span class="st"> </span><span class="op">-</span><span class="fl">0.09</span><span class="op">*</span>x_range,
+        Ward <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;West End&quot;</span>, <span class="st">&quot;Marylebone High Street&quot;</span>, <span class="st">&quot;Camden Town with Primrose Hill&quot;</span>, <span class="st">&quot;Holborn and Covent Garden&quot;</span>) <span class="op">~</span><span class="st"> </span><span class="op">-</span><span class="fl">0.05</span><span class="op">*</span>x_range,
+        Ward <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Shepherd&#39;s Bush Green&quot;</span>, <span class="st">&quot;Sands End&quot;</span>, <span class="st">&quot;Faraday&quot;</span>) <span class="op">~</span><span class="st"> </span><span class="op">-</span><span class="fl">0.02</span><span class="op">*</span>x_range,
+        Ward <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Coldharbour&quot;</span>, <span class="st">&quot;Bunhill&quot;</span>) <span class="op">~</span><span class="st"> </span><span class="fl">0.02</span><span class="op">*</span>x_range,
+        Ward <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Junction&quot;</span>, <span class="st">&quot;Tokyngton&quot;</span>, <span class="st">&quot;St Pancras and Somers Town&quot;</span>, <span class="st">&quot;Homerton&quot;</span>, <span class="st">&quot;Canary Wharf&quot;</span>, <span class="st">&quot;Peninsula&quot;</span>) <span class="op">~</span><span class="st"> </span><span class="fl">0.03</span><span class="op">*</span>x_range,
+        Ward <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;St James&#39;s&quot;</span>, <span class="st">&quot;Grove&quot;</span>) <span class="op">~</span><span class="st"> </span><span class="fl">0.05</span><span class="op">*</span>x_range,
+        <span class="ot">TRUE</span> <span class="op">~</span><span class="st"> </span><span class="dv">0</span>
+      ),
+      <span class="dt">nudge_y =</span> <span class="kw">case_when</span>(
+        Ward <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;West End&quot;</span>) <span class="op">~</span><span class="st"> </span><span class="op">-</span><span class="fl">0.07</span><span class="op">*</span>y_range,
+        Ward <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Knightsbridge and Belgravia&quot;</span>, <span class="st">&quot;St James&#39;s&quot;</span>, <span class="st">&quot;Peninsula&quot;</span>) <span class="op">~</span><span class="st"> </span><span class="op">-</span><span class="fl">0.04</span><span class="op">*</span>y_range,
+        Ward <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Coldharbour&quot;</span>, <span class="st">&quot;Bunhill&quot;</span>, <span class="st">&quot;Hornsey&quot;</span>, <span class="st">&quot;Faraday&quot;</span>, <span class="st">&quot;New Cross&quot;</span>, <span class="st">&quot;Rotherhithe&quot;</span>) <span class="op">~</span><span class="st"> </span><span class="op">-</span><span class="fl">0.02</span><span class="op">*</span>y_range,
+        Ward <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Junction&quot;</span>, <span class="st">&quot;Tokyngton&quot;</span>, <span class="st">&quot;Homerton&quot;</span>, <span class="st">&quot;Shepherd&#39;s Bush Green&quot;</span>, <span class="st">&quot;Grove&quot;</span>) <span class="op">~</span><span class="st"> </span><span class="fl">0.02</span><span class="op">*</span>y_range,
+        Ward <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Stratford and New Town&quot;</span>, <span class="st">&quot;Sands End&quot;</span>, <span class="st">&quot;St Pancras and Somers Town&quot;</span>) <span class="op">~</span><span class="st"> </span><span class="fl">0.03</span><span class="op">*</span>y_range,
+        Ward <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Marylebone High Street&quot;</span>, <span class="st">&quot;Camden Town with Primrose Hill&quot;</span>, <span class="st">&quot;Holborn and Covent Garden&quot;</span>, <span class="st">&quot;Hoxton East &amp; Shoreditch&quot;</span>, <span class="st">&quot;Bromley Town&quot;</span>, <span class="st">&quot;Canary Wharf&quot;</span>) <span class="op">~</span><span class="st"> </span><span class="fl">0.05</span><span class="op">*</span>y_range,
+        <span class="ot">TRUE</span> <span class="op">~</span><span class="st"> </span><span class="dv">0</span>
+      )
+    )
+  
+    <span class="kw">geom_text_repel</span>(
+      <span class="dt">data =</span> df_annotate, 
+      <span class="dt">mapping =</span> <span class="kw">aes</span>(
+        <span class="dt">x =</span> COORDS_X,
+        <span class="dt">y =</span> COORDS_Y,
+        <span class="dt">label =</span> Ward
+      ),
+      <span class="dt">nudge_x =</span> df_annotate<span class="op">$</span>nudge_x,
+      <span class="dt">nudge_y =</span> df_annotate<span class="op">$</span>nudge_y,
+      <span class="dt">force =</span> <span class="dv">10</span>,
+      <span class="dt">size =</span> <span class="dv">3</span>,
+      <span class="dt">min.segment.length =</span> <span class="dv">0</span>,
+      <span class="dt">point.padding =</span> <span class="ot">NA</span>,
+      <span class="dt">segment.color =</span> <span class="st">&quot;grey50&quot;</span>
+    )
+}
 
 plot_crimes &lt;-<span class="st"> </span><span class="cf">function</span>(cat1, <span class="dt">annotate =</span> <span class="ot">TRUE</span>){
   
@@ -428,7 +491,7 @@ plot_crimes &lt;-<span class="st"> </span><span class="cf">function</span>(cat1,
   
   <span class="co"># Merge it with sf object, to have the geometry and crime data in one single data frame</span>
   to_plot &lt;-<span class="st"> </span>sf.lsoa <span class="op">%&gt;%</span>
-<span class="st">    </span><span class="kw">select</span>(LSOA11CD, WD15NM, geometry) <span class="op">%&gt;%</span>
+<span class="st">    </span><span class="kw">select</span>(LSOA11CD, Ward, geometry) <span class="op">%&gt;%</span>
 <span class="st">    </span><span class="kw">left_join</span>(data_filtered, <span class="dt">by =</span> <span class="kw">c</span>(<span class="st">&#39;LSOA11CD&#39;</span>=<span class="st">&#39;Code&#39;</span>)) <span class="op">%&gt;%</span><span class="st"> </span>
 <span class="st">    </span><span class="kw">mutate</span>(
       <span class="dt">CENTROID =</span> <span class="kw">map</span>(geometry, st_centroid),
@@ -437,8 +500,6 @@ plot_crimes &lt;-<span class="st"> </span><span class="cf">function</span>(cat1,
       <span class="dt">COORDS_Y =</span> <span class="kw">map_dbl</span>(COORDS, <span class="dv">2</span>))
   
   <span class="co"># Create ggplot object</span>
-  ldn_x &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="op">-</span><span class="fl">0.30</span>, <span class="fl">0.044</span>) <span class="co"># Limits to Central London</span>
-  ldn_y &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="fl">51.41</span>, <span class="fl">51.58</span>) <span class="co"># Limits to Central London</span>
   plt &lt;-<span class="st"> </span><span class="kw">ggplot</span>(to_plot) <span class="op">+</span>
 <span class="st">    </span><span class="kw">geom_sf</span>(<span class="kw">aes</span>(<span class="dt">fill=</span>Count), <span class="dt">col=</span><span class="st">&#39;black&#39;</span>, <span class="dt">size=</span><span class="fl">0.01</span>, <span class="dt">na.rm=</span><span class="ot">TRUE</span>) <span class="op">+</span>
 <span class="st">    </span><span class="kw">geom_sf</span>(<span class="dt">data=</span>sf.borough, <span class="dt">fill=</span><span class="ot">NA</span>, <span class="dt">col=</span><span class="st">&#39;black&#39;</span>, <span class="dt">size=</span><span class="fl">0.03</span>) <span class="op">+</span>
@@ -455,67 +516,12 @@ plot_crimes &lt;-<span class="st"> </span><span class="cf">function</span>(cat1,
   
   <span class="co"># Add annotations if necessary</span>
   <span class="cf">if</span>(annotate) {
-    <span class="co"># X and Y range of the map</span>
-    x_range &lt;-<span class="st"> </span><span class="kw">abs</span>(<span class="kw">Reduce</span>(<span class="st">&quot;-&quot;</span>, <span class="kw">range</span>(to_plot<span class="op">$</span>COORDS_X)))
-    y_range &lt;-<span class="st"> </span><span class="kw">abs</span>(<span class="kw">Reduce</span>(<span class="st">&quot;-&quot;</span>, <span class="kw">range</span>(to_plot<span class="op">$</span>COORDS_Y)))
-    
-    <span class="co"># Filtered data frame which will be used as annotation dataset</span>
-    <span class="co"># And add labelling params for some wards known to have high level of crimes</span>
-    to_annotate &lt;-<span class="st"> </span>to_plot <span class="op">%&gt;%</span>
-<span class="st">      </span><span class="kw">arrange</span>(<span class="kw">desc</span>(Count)) <span class="op">%&gt;%</span>
-<span class="st">      </span><span class="kw">head</span>(<span class="dv">11</span>) <span class="op">%&gt;%</span>
-<span class="st">      </span><span class="kw">distinct</span>(WD15NM, <span class="dt">.keep_all =</span> <span class="ot">TRUE</span>) <span class="op">%&gt;%</span>
-<span class="st">      </span><span class="kw">filter</span>(<span class="op">!</span>WD15NM <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Heathrow Villages&quot;</span>, <span class="st">&quot;Yiewsley&quot;</span>, <span class="st">&quot;Romford Town&quot;</span>, <span class="st">&quot;Fairfield&quot;</span>, <span class="st">&quot;Sutton Central&quot;</span>)) <span class="op">%&gt;%</span><span class="st"> </span><span class="co"># too far from Central London</span>
-<span class="st">      </span><span class="kw">mutate</span>(
-        <span class="dt">nudge_x =</span> <span class="kw">case_when</span>(
-          WD15NM <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;West End&quot;</span>) <span class="op">~</span><span class="st"> </span><span class="op">-</span><span class="fl">0.05</span><span class="op">*</span>x_range,
-          WD15NM <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Knightsbridge and Belgravia&quot;</span>) <span class="op">~</span><span class="st"> </span><span class="op">-</span><span class="fl">0.09</span><span class="op">*</span>x_range,
-          WD15NM <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Junction&quot;</span>) <span class="op">~</span><span class="st"> </span><span class="fl">0.03</span><span class="op">*</span>x_range,
-          WD15NM <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Coldharbour&quot;</span>, <span class="st">&quot;Bunhill&quot;</span>) <span class="op">~</span><span class="st"> </span><span class="fl">0.02</span><span class="op">*</span>x_range,
-          WD15NM <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Shepherd&#39;s Bush Green&quot;</span>) <span class="op">~</span><span class="st"> </span><span class="op">-</span><span class="fl">0.02</span><span class="op">*</span>x_range,
-          WD15NM <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;St James&#39;s&quot;</span>) <span class="op">~</span><span class="st"> </span><span class="fl">0.05</span><span class="op">*</span>x_range,
-          WD15NM <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Stratford and New Town&quot;</span>) <span class="op">~</span><span class="st"> </span><span class="dv">0</span><span class="op">*</span>x_range,
-          WD15NM <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Marylebone High Street&quot;</span>, <span class="st">&quot;Camden Town with Primrose Hill&quot;</span>, <span class="st">&quot;Holborn and Covent Garden&quot;</span>) <span class="op">~</span><span class="st"> </span><span class="op">-</span><span class="fl">0.05</span><span class="op">*</span>x_range,
-          WD15NM <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Grove&quot;</span>) <span class="op">~</span><span class="st"> </span><span class="fl">0.05</span> <span class="op">*</span><span class="st"> </span>x_range,
-          WD15NM <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Hoxton East &amp; Shoreditch&quot;</span>) <span class="op">~</span><span class="st"> </span><span class="dv">0</span> <span class="op">*</span><span class="st"> </span>x_range,
-          <span class="ot">TRUE</span> <span class="op">~</span><span class="st"> </span><span class="dv">0</span>
-        ),
-        <span class="dt">nudge_y =</span> <span class="kw">case_when</span>(
-          WD15NM <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;West End&quot;</span>) <span class="op">~</span><span class="st"> </span><span class="op">-</span><span class="fl">0.07</span><span class="op">*</span>y_range,
-          WD15NM <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Knightsbridge and Belgravia&quot;</span>) <span class="op">~</span><span class="st"> </span><span class="op">-</span><span class="fl">0.04</span><span class="op">*</span>y_range,
-          WD15NM <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Junction&quot;</span>) <span class="op">~</span><span class="st"> </span><span class="fl">0.02</span><span class="op">*</span>y_range,
-          WD15NM <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Coldharbour&quot;</span>, <span class="st">&quot;Bunhill&quot;</span>) <span class="op">~</span><span class="st"> </span><span class="op">-</span><span class="fl">0.02</span><span class="op">*</span>y_range,
-          WD15NM <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Shepherd&#39;s Bush Green&quot;</span>) <span class="op">~</span><span class="st"> </span><span class="fl">0.02</span><span class="op">*</span>y_range,
-          WD15NM <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;St James&#39;s&quot;</span>) <span class="op">~</span><span class="st"> </span><span class="op">-</span><span class="fl">0.05</span><span class="op">*</span>y_range,
-          WD15NM <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Stratford and New Town&quot;</span>) <span class="op">~</span><span class="st"> </span><span class="fl">0.03</span><span class="op">*</span>y_range,
-          WD15NM <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Marylebone High Street&quot;</span>, <span class="st">&quot;Camden Town with Primrose Hill&quot;</span>, <span class="st">&quot;Holborn and Covent Garden&quot;</span>) <span class="op">~</span><span class="st"> </span><span class="fl">0.05</span><span class="op">*</span>y_range,
-          WD15NM <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Grove&quot;</span>) <span class="op">~</span><span class="st"> </span><span class="fl">0.02</span> <span class="op">*</span><span class="st"> </span>y_range,
-          WD15NM <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;Hoxton East &amp; Shoreditch&quot;</span>) <span class="op">~</span><span class="st"> </span><span class="fl">0.05</span> <span class="op">*</span><span class="st"> </span>y_range,
-          <span class="ot">TRUE</span> <span class="op">~</span><span class="st"> </span><span class="dv">0</span>
-        )
-      )
-    
-    plt &lt;-<span class="st"> </span>plt <span class="op">+</span><span class="st"> </span>
-<span class="st">      </span><span class="kw">geom_text_repel</span>(
-        <span class="dt">data =</span> to_annotate, 
-        <span class="dt">mapping =</span> <span class="kw">aes</span>(
-          <span class="dt">x =</span> COORDS_X,
-          <span class="dt">y =</span> COORDS_Y,
-          <span class="dt">label =</span> WD15NM
-        ),
-        <span class="dt">nudge_x =</span> to_annotate<span class="op">$</span>nudge_x,
-        <span class="dt">nudge_y =</span> to_annotate<span class="op">$</span>nudge_y,
-        <span class="dt">force =</span> <span class="dv">10</span>,
-        <span class="dt">size =</span> <span class="dv">3</span>,
-        <span class="dt">min.segment.length =</span> <span class="dv">0</span>,
-        <span class="dt">point.padding =</span> <span class="ot">NA</span>,
-        <span class="dt">segment.color =</span> <span class="st">&quot;grey50&quot;</span>
-      )
+    plt &lt;-<span class="st"> </span>plt <span class="op">+</span><span class="st"> </span><span class="kw">annotations</span>(to_plot, <span class="st">&quot;Count&quot;</span>)
   }
   
   plt
 }</code></pre></div>
-<p>Let’s call this function for each type of crime, and display the maps!</p>
+<p>Let’s call this function for every crime category, and display the resulting maps!</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">all &lt;-<span class="st"> </span><span class="kw">plot_crimes</span>(<span class="ot">NA</span>)
 burglary &lt;-<span class="st"> </span><span class="kw">plot_crimes</span>(<span class="st">&quot;Burglary&quot;</span>)
 damage &lt;-<span class="st"> </span><span class="kw">plot_crimes</span>(<span class="st">&quot;Criminal Damage&quot;</span>)
@@ -533,4 +539,918 @@ violence &lt;-<span class="st"> </span><span class="kw">plot_crimes</span>(<span
 <p>Notably, very central London shows up in all maps as having a large number of reported crimes: not really surprising, and rather expected.</p>
 <p>Also, all these maps tend to resemble one another, i.e similar regions are highlighted more than once: a region having a high level of crime in one particular category is likely to display a high level of crime in other categories too.</p>
 <p>Having lived in London for a few years, most pinker regions follow my expectations. However, I was slightly surprised seeing Coldharbour and Grove as crime hubs. For the latter, after a quick research on the Internet, Coldharbour is actually located around Brixton station, so in fact it is not not really surprising to see it highlighted. Grove is located around Kingston upon Thames.</p>
+</div>
+</div>
+<div id="how-has-it-evolved" class="section level1">
+<h1>How has it evolved?</h1>
+<p>Let’s now download the historic data from the same webpage, and tidy it.</p>
+<p>The format is exactly the same as previously, great! The only noticeable thing is that the data in this file is available until December 2016. I need to add the data from the previous file to get everything till May 2018 (making sure not to double count the period from June-16 to Dec-16)</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Download the data</span>
+url &lt;-<span class="st"> &quot;https://files.datapress.com/london/dataset/recorded_crime_summary/2017-05-04T07:20:40.38/MPS_LSOA_Level_Crime_Historic.csv&quot;</span>
+path &lt;-<span class="st"> &quot;~/Dev/R/london-crimes/MPS_LSOA_Level_Crime_Historic.csv&quot;</span>
+<span class="co">#httr::GET(url, httr::write_disk(path, overwrite = TRUE))</span>
+
+<span class="co"># Tidy it</span>
+data_histo &lt;-<span class="st"> </span>readr<span class="op">::</span><span class="kw">read_csv</span>(path) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">rename</span>(<span class="dt">Code =</span> <span class="st">`</span><span class="dt">LSOA Code</span><span class="st">`</span>, <span class="dt">Cat1 =</span> <span class="st">`</span><span class="dt">Major Category</span><span class="st">`</span>, <span class="dt">Cat2 =</span> <span class="st">`</span><span class="dt">Minor Category</span><span class="st">`</span>) <span class="op">%&gt;%</span>
+<span class="st">  </span>tidyr<span class="op">::</span><span class="kw">gather</span>(Date, Count, <span class="op">-</span>(Code<span class="op">:</span>Cat2)) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">mutate_at</span>(<span class="kw">vars</span>(Date), <span class="op">~</span><span class="kw">as.Date</span>(<span class="kw">paste0</span>(., <span class="st">&quot;01&quot;</span>), <span class="dt">format =</span> <span class="st">&quot;%Y%m%d&quot;</span>)) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Month =</span> lubridate<span class="op">::</span><span class="kw">month</span>(Date), <span class="dt">Year =</span> lubridate<span class="op">::</span><span class="kw">year</span>(Date)) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">mutate_if</span>(is.character, forcats<span class="op">::</span>as_factor)
+
+<span class="co"># Bind dates from June-16 to May-18, making sure to not overlap</span>
+recent_dates &lt;-<span class="st"> </span><span class="kw">unique</span>(data<span class="op">$</span>Date)
+overlap &lt;-<span class="st"> </span>recent_dates[recent_dates <span class="op">%in%</span><span class="st"> </span><span class="kw">unique</span>(data_histo<span class="op">$</span>Date)]
+
+data_histo &lt;-<span class="st"> </span>data_histo <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">filter</span>(<span class="op">!</span>Date <span class="op">%in%</span><span class="st"> </span>overlap) <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">bind_rows</span>(data) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">left_join</span>(lsoa_ward <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">select</span>(LSOA11CD, Ward), 
+            <span class="dt">by =</span> <span class="kw">c</span>(<span class="st">&quot;Code&quot;</span> =<span class="st"> &quot;LSOA11CD&quot;</span>)) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">mutate_if</span>(is.character, forcats<span class="op">::</span>as_factor) <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">filter</span>(Borough <span class="op">!=</span><span class="st"> &quot;City of London&quot;</span>) <span class="co"># Because not available in recent months</span></code></pre></div>
+<p>Now the first thing I want to do is to make sure (at least visually) there is no obvious oddity in the data, such as a month missing or having a lot less or more data than expected. Let’s plot the overall count by month over the period to visually inspect it.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">data_histo <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">group_by</span>(Date) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">summarise</span>(<span class="dt">Count =</span> <span class="kw">sum</span>(Count)) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(Date, Count)) <span class="op">+</span>
+<span class="st">  </span><span class="kw">geom_point</span>() <span class="op">+</span>
+<span class="st">  </span><span class="kw">geom_smooth</span>() <span class="op">+</span>
+<span class="st">  </span>hrbrthemes<span class="op">::</span><span class="kw">theme_ipsum</span>(<span class="dt">plot_title_size =</span> <span class="dv">12</span>) <span class="op">+</span>
+<span class="st">  </span><span class="kw">scale_y_continuous</span>(<span class="dt">labels =</span> scales<span class="op">::</span>comma) <span class="op">+</span>
+<span class="st">  </span><span class="kw">labs</span>(<span class="dt">title =</span> <span class="st">&quot;Number of crimes recorded in London since 2008&quot;</span>,
+       <span class="dt">caption =</span> <span class="st">&quot;Source: London Datastore</span><span class="ch">\n</span><span class="st">Graphic by Pierre-Ange Oliva&quot;</span>)</code></pre></div>
+<p><img src="/post/2018-06-26-london-recorded-crimes_files/figure-html/unnamed-chunk-17-1.png" width="100%" style="display: block; margin: auto;" /></p>
+<p>Nothing odd stands out from the plot, so good to go! Interesting to see how the trend was on the decrease from 2008 to 2014 (despite a slight increase around mid-end 2011: London riots?) and then suddenly picked up in 2014 and kept increasing since …</p>
+<p>Despite having data available at a monthly periodicity, I now decide to group everything by year: having it yearly over a ten-year period should be enough for my purposes, not really interested in seeing monthly data for now. Plus, it probably removes some possible noise, and seasonality (is there seasonality in crimes? Mmmmh …)</p>
+<p>Since data is available up until May-2018, and that I don’t want to have a truncated year of 2018, I will for now remove 2018 from the data frame.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">data_y &lt;-<span class="st"> </span>data_histo <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">group_by</span>(Code, Borough, Ward, Cat1, Cat2, Year) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">summarise</span>(<span class="dt">Count =</span> <span class="kw">sum</span>(Count)) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">filter</span>(Year <span class="op">!=</span><span class="st"> </span><span class="dv">2018</span>)</code></pre></div>
+<p>Also, I think that LSOA definition changes every now and then, to deal with the increase or decrease in population (given that LSOA are defined as to be consistent in terms of population). Let’s make sure the LSOAs that are in the dataset in 2017 are available in 2008 as well… A quick way to check is to count the number of LSOAs with a number of crimes equal to zero.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">data_y <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">group_by</span>(Year, Code) <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">summarise</span>(<span class="dt">Count =</span> <span class="kw">sum</span>(Count)) <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">filter</span>(Count <span class="op">==</span><span class="st"> </span><span class="dv">0</span>) <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">count</span>(Year) <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span>knitr<span class="op">::</span><span class="kw">kable</span>(<span class="dt">format =</span> <span class="st">&#39;html&#39;</span>, <span class="dt">align =</span> <span class="kw">c</span>(<span class="st">&#39;l&#39;</span>, <span class="st">&#39;r&#39;</span>)) <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span>kableExtra<span class="op">::</span><span class="kw">kable_styling</span>(<span class="dt">bootstrap_options =</span> <span class="kw">c</span>(<span class="st">&#39;condensed&#39;</span>, <span class="st">&#39;hover&#39;</span>), <span class="dt">full_width =</span> <span class="ot">FALSE</span>, <span class="dt">position =</span> <span class="st">&quot;center&quot;</span>)</code></pre></div>
+<table class="table table-condensed table-hover" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="text-align:left;">
+Year
+</th>
+<th style="text-align:right;">
+n
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+2008
+</td>
+<td style="text-align:right;">
+191
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+2009
+</td>
+<td style="text-align:right;">
+191
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+2010
+</td>
+<td style="text-align:right;">
+191
+</td>
+</tr>
+</tbody>
+</table>
+<p>Bingo, the definition of some LSOAs probably changed in 2011 ( <a href="https://data.london.gov.uk/dataset/lsoa-atlas">and indeed it did</a> ). I will then compare the change in crimes between 2012 to 2017, and not earlier.</p>
+<p>Now there exist quite a few different ways of representing changes in some variable. Mike Bostock (creator of D3) summarizes it very well in <a href="https://beta.observablehq.com/@mbostock/methods-of-comparison-compared">this article</a>. I choose here to display the change in crimes by considering:</p>
+<ul>
+<li>the absolute difference <span class="math inline">\(b-a\)</span></li>
+<li>the log ratio <span class="math inline">\(log(\frac{b}{a})\)</span></li>
+</ul>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">changes &lt;-<span class="st"> </span>data_y <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">group_by</span>(Borough, Ward, Code, Year) <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">summarise_at</span>(<span class="kw">vars</span>(Count), sum) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">filter</span>(Year <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="dv">2012</span>, <span class="dv">2017</span>)) <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">ungroup</span>() <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">group_by</span>(Code) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">arrange</span>(Year) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Diff_Abs =</span> Count<span class="op">-</span><span class="kw">lag</span>(Count)) <span class="op">%&gt;%</span><span class="st"> </span><span class="co"># Absolute difference</span>
+<span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Diff_Log =</span> <span class="kw">log</span>(Count<span class="op">/</span><span class="kw">lag</span>(Count))) <span class="co"># Log Ratio</span></code></pre></div>
+<p>Let’s join the <code>sf</code> data frame to it, to prepare for the mapping part.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">to_plot_<span class="dv">2</span> &lt;-<span class="st"> </span>sf.lsoa <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">select</span>(LSOA11CD, geometry) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">left_join</span>(<span class="kw">filter</span>(changes, Year <span class="op">==</span><span class="st"> </span><span class="dv">2017</span>), <span class="dt">by =</span> <span class="kw">c</span>(<span class="st">&#39;LSOA11CD&#39;</span>=<span class="st">&#39;Code&#39;</span>)) <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">mutate</span>(
+    <span class="dt">CENTROID =</span> <span class="kw">map</span>(geometry, st_centroid),
+    <span class="dt">COORDS =</span> <span class="kw">map</span>(CENTROID, st_coordinates),
+    <span class="dt">COORDS_X =</span> <span class="kw">map_dbl</span>(COORDS, <span class="dv">1</span>),
+    <span class="dt">COORDS_Y =</span> <span class="kw">map_dbl</span>(COORDS, <span class="dv">2</span>))</code></pre></div>
+<p>Let’s start by creating some base variables for the map: base map, colour coding, and maximum values.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Colour coding</span>
+colours &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;#0B296D&quot;</span>,<span class="st">&quot;#3B9CCF&quot;</span>, <span class="st">&quot;#CEE2F4&quot;</span>, <span class="st">&quot;white&quot;</span>, <span class="st">&quot;#FFCAB3&quot;</span>, <span class="st">&quot;#FF0A00&quot;</span>,<span class="st">&quot;#750000&quot;</span>)
+values_abs &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="dv">0</span>, <span class="fl">0.2</span>, <span class="fl">0.4</span>, <span class="fl">0.5</span>, <span class="fl">0.6</span>, <span class="fl">0.8</span>, <span class="dv">1</span>)
+values_log &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="dv">0</span>, <span class="fl">0.1</span>, <span class="fl">0.3</span>, <span class="fl">0.5</span>, <span class="fl">0.7</span>, <span class="fl">0.9</span>, <span class="dv">1</span>)
+
+<span class="co"># Maximum values</span>
+max_diff_abs &lt;-<span class="st"> </span><span class="kw">max</span>(<span class="kw">abs</span>(to_plot_<span class="dv">2</span><span class="op">$</span>Diff_Abs), <span class="dt">na.rm =</span> <span class="ot">TRUE</span>)
+max_diff_log &lt;-<span class="st"> </span><span class="kw">max</span>(<span class="kw">abs</span>(to_plot_<span class="dv">2</span><span class="op">$</span>Diff_Log), <span class="dt">na.rm =</span> <span class="ot">TRUE</span>)
+
+<span class="co"># Base map</span>
+base &lt;-<span class="st"> </span><span class="kw">ggplot</span>() <span class="op">+</span>
+<span class="st">  </span><span class="kw">geom_sf</span>(<span class="dt">data=</span>sf.borough, <span class="dt">fill=</span><span class="ot">NA</span>, <span class="dt">col=</span><span class="st">&#39;black&#39;</span>, <span class="dt">size=</span><span class="fl">0.03</span>) <span class="op">+</span>
+<span class="st">  </span><span class="kw">geom_sf</span>(<span class="dt">data=</span>sf.wards, <span class="dt">fill=</span><span class="ot">NA</span>, <span class="dt">col=</span><span class="st">&#39;black&#39;</span>, <span class="dt">size=</span><span class="fl">0.02</span>) <span class="op">+</span>
+<span class="st">  </span><span class="kw">geom_sf</span>(<span class="dt">data=</span>sf.waterways, <span class="dt">fill=</span><span class="st">&quot;#696969&quot;</span>, <span class="dt">col=</span><span class="ot">NA</span>) <span class="op">+</span>
+<span class="st">  </span><span class="kw">labs</span>(<span class="dt">caption =</span> <span class="st">&#39;Source: London Datastore</span><span class="ch">\n</span><span class="st">Graphic by Pierre-Ange Oliva&#39;</span>,
+       <span class="dt">title =</span> glue<span class="op">::</span><span class="kw">glue</span>(<span class="st">&#39;Change in Crimes in London, 2012–2017&#39;</span>),
+       <span class="dt">x =</span> <span class="st">&quot;&quot;</span>, <span class="dt">y =</span> <span class="st">&quot;&quot;</span>) <span class="op">+</span>
+<span class="st">  </span><span class="kw">theme_map</span>()</code></pre></div>
+<p>Now on to the absolute changes! I also display a table below the map with the large changes.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">plt_absolute &lt;-<span class="st"> </span>base <span class="op">+</span>
+<span class="st">  </span><span class="kw">geom_sf</span>(<span class="dt">data =</span> to_plot_<span class="dv">2</span>, <span class="kw">aes</span>(<span class="dt">fill=</span>Diff_Abs), <span class="dt">col=</span><span class="st">&#39;black&#39;</span>, <span class="dt">size=</span><span class="fl">0.01</span>, <span class="dt">na.rm=</span><span class="ot">TRUE</span>) <span class="op">+</span>
+<span class="st">  </span><span class="kw">coord_sf</span>(<span class="dt">crs =</span> <span class="dv">4326</span>, <span class="dt">xlim =</span> ldn_x, <span class="dt">ylim =</span> ldn_y) <span class="op">+</span>
+<span class="st">  </span><span class="kw">scale_fill_gradientn</span>(<span class="dt">colours =</span> colours,
+                       <span class="dt">values =</span> values_abs,
+                       <span class="dt">limits =</span> <span class="kw">c</span>(<span class="op">-</span>max_diff_abs,max_diff_abs),
+                       <span class="dt">na.value =</span> <span class="st">&#39;#f5f5f2&#39;</span>,
+                       <span class="dt">breaks =</span> <span class="kw">c</span>(<span class="op">-</span>max_diff_abs,<span class="op">-</span><span class="fl">1e3</span>,<span class="dv">0</span>,<span class="fl">1e3</span>,max_diff_abs),
+                       <span class="dt">guide =</span> <span class="kw">guide_map</span>(<span class="dt">title =</span> <span class="st">&quot;Absolute change in crimes&quot;</span>)) <span class="op">+</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">annotations</span>(to_plot_<span class="dv">2</span>, <span class="st">&quot;Diff_Abs&quot;</span>, <span class="dv">15</span>)
+plt_absolute</code></pre></div>
+<p><img src="/post/2018-06-26-london-recorded-crimes_files/figure-html/unnamed-chunk-23-1.png" width="100%" style="display: block; margin: auto;" /></p>
+<table class="table table-condensed table-hover" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="text-align:left;">
+Borough
+</th>
+<th style="text-align:left;">
+Ward
+</th>
+<th style="text-align:left;">
+Code
+</th>
+<th style="text-align:right;">
+2012
+</th>
+<th style="text-align:right;">
+2017
+</th>
+<th style="text-align:right;">
+Diff_Abs
+</th>
+<th style="text-align:right;">
+Ratio
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+Westminster
+</td>
+<td style="text-align:left;">
+St James’s
+</td>
+<td style="text-align:left;">
+E01004734
+</td>
+<td style="text-align:right;">
+6617
+</td>
+<td style="text-align:right;">
+4778
+</td>
+<td style="text-align:right;">
+-1839
+</td>
+<td style="text-align:right;">
+0.7220795
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Westminster
+</td>
+<td style="text-align:left;">
+West End
+</td>
+<td style="text-align:left;">
+E01033596
+</td>
+<td style="text-align:right;">
+2098
+</td>
+<td style="text-align:right;">
+1458
+</td>
+<td style="text-align:right;">
+-640
+</td>
+<td style="text-align:right;">
+0.6949476
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Westminster
+</td>
+<td style="text-align:left;">
+St James’s
+</td>
+<td style="text-align:left;">
+E01004736
+</td>
+<td style="text-align:right;">
+3964
+</td>
+<td style="text-align:right;">
+3348
+</td>
+<td style="text-align:right;">
+-616
+</td>
+<td style="text-align:right;">
+0.8446014
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Westminster
+</td>
+<td style="text-align:left;">
+West End
+</td>
+<td style="text-align:left;">
+E01004763
+</td>
+<td style="text-align:right;">
+5296
+</td>
+<td style="text-align:right;">
+4695
+</td>
+<td style="text-align:right;">
+-601
+</td>
+<td style="text-align:right;">
+0.8865181
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Westminster
+</td>
+<td style="text-align:left;">
+St James’s
+</td>
+<td style="text-align:left;">
+E01004735
+</td>
+<td style="text-align:right;">
+2606
+</td>
+<td style="text-align:right;">
+2045
+</td>
+<td style="text-align:right;">
+-561
+</td>
+<td style="text-align:right;">
+0.7847276
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Westminster
+</td>
+<td style="text-align:left;">
+West End
+</td>
+<td style="text-align:left;">
+E01004761
+</td>
+<td style="text-align:right;">
+1911
+</td>
+<td style="text-align:right;">
+1439
+</td>
+<td style="text-align:right;">
+-472
+</td>
+<td style="text-align:right;">
+0.7530089
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Camden
+</td>
+<td style="text-align:left;">
+Camden Town with Primrose Hill
+</td>
+<td style="text-align:left;">
+E01000858
+</td>
+<td style="text-align:right;">
+1244
+</td>
+<td style="text-align:right;">
+823
+</td>
+<td style="text-align:right;">
+-421
+</td>
+<td style="text-align:right;">
+0.6615756
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Lambeth
+</td>
+<td style="text-align:left;">
+Coldharbour
+</td>
+<td style="text-align:left;">
+E01003047
+</td>
+<td style="text-align:right;">
+1224
+</td>
+<td style="text-align:right;">
+1666
+</td>
+<td style="text-align:right;">
+442
+</td>
+<td style="text-align:right;">
+1.3611111
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Brent
+</td>
+<td style="text-align:left;">
+Tokyngton
+</td>
+<td style="text-align:left;">
+E01033424
+</td>
+<td style="text-align:right;">
+389
+</td>
+<td style="text-align:right;">
+895
+</td>
+<td style="text-align:right;">
+506
+</td>
+<td style="text-align:right;">
+2.3007712
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Islington
+</td>
+<td style="text-align:left;">
+Junction
+</td>
+<td style="text-align:left;">
+E01002770
+</td>
+<td style="text-align:right;">
+441
+</td>
+<td style="text-align:right;">
+968
+</td>
+<td style="text-align:right;">
+527
+</td>
+<td style="text-align:right;">
+2.1950113
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Newham
+</td>
+<td style="text-align:left;">
+Stratford and New Town
+</td>
+<td style="text-align:left;">
+E01003617
+</td>
+<td style="text-align:right;">
+1270
+</td>
+<td style="text-align:right;">
+1818
+</td>
+<td style="text-align:right;">
+548
+</td>
+<td style="text-align:right;">
+1.4314961
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Camden
+</td>
+<td style="text-align:left;">
+St Pancras and Somers Town
+</td>
+<td style="text-align:left;">
+E01000953
+</td>
+<td style="text-align:right;">
+215
+</td>
+<td style="text-align:right;">
+903
+</td>
+<td style="text-align:right;">
+688
+</td>
+<td style="text-align:right;">
+4.2000000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Bromley
+</td>
+<td style="text-align:left;">
+Bromley Town
+</td>
+<td style="text-align:left;">
+E01000675
+</td>
+<td style="text-align:right;">
+636
+</td>
+<td style="text-align:right;">
+1336
+</td>
+<td style="text-align:right;">
+700
+</td>
+<td style="text-align:right;">
+2.1006289
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Hillingdon
+</td>
+<td style="text-align:left;">
+Heathrow Villages
+</td>
+<td style="text-align:left;">
+E01002444
+</td>
+<td style="text-align:right;">
+2076
+</td>
+<td style="text-align:right;">
+3081
+</td>
+<td style="text-align:right;">
+1005
+</td>
+<td style="text-align:right;">
+1.4841040
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Newham
+</td>
+<td style="text-align:left;">
+Stratford and New Town
+</td>
+<td style="text-align:left;">
+E01033583
+</td>
+<td style="text-align:right;">
+2139
+</td>
+<td style="text-align:right;">
+3294
+</td>
+<td style="text-align:right;">
+1155
+</td>
+<td style="text-align:right;">
+1.5399719
+</td>
+</tr>
+</tbody>
+</table>
+<p>And the log ratios:</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">plt_log &lt;-<span class="st"> </span>base <span class="op">+</span>
+<span class="st">  </span><span class="kw">geom_sf</span>(<span class="dt">data =</span> to_plot_<span class="dv">2</span>, <span class="kw">aes</span>(<span class="dt">fill=</span>Diff_Log), <span class="dt">col=</span><span class="st">&#39;black&#39;</span>, <span class="dt">size=</span><span class="fl">0.01</span>, <span class="dt">na.rm=</span><span class="ot">TRUE</span>) <span class="op">+</span>
+<span class="st">  </span><span class="kw">coord_sf</span>(<span class="dt">crs =</span> <span class="dv">4326</span>, <span class="dt">xlim =</span> ldn_x, <span class="dt">ylim =</span> ldn_y) <span class="op">+</span>
+<span class="st">  </span><span class="kw">scale_fill_gradientn</span>(<span class="dt">colours =</span> colours,
+                       <span class="dt">values =</span> values_log,
+                       <span class="dt">limits =</span> <span class="kw">c</span>(<span class="op">-</span>max_diff_log,max_diff_log),
+                       <span class="dt">na.value =</span> <span class="st">&#39;#f5f5f2&#39;</span>,
+                       <span class="dt">breaks=</span> <span class="kw">log</span>(<span class="kw">c</span>(<span class="fl">0.2</span>,<span class="fl">0.5</span>,<span class="dv">1</span>,<span class="dv">2</span>,<span class="dv">5</span>)),
+                       <span class="dt">labels =</span> <span class="kw">paste0</span>(<span class="kw">c</span>(<span class="fl">0.2</span>,<span class="fl">0.5</span>,<span class="dv">1</span>,<span class="dv">2</span>,<span class="dv">5</span>),<span class="st">&quot;x&quot;</span>),
+                       <span class="dt">guide =</span> <span class="kw">guide_map</span>(<span class="dt">title =</span> <span class="st">&quot;Relative change in crimes&quot;</span>)) <span class="op">+</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">annotations</span>(to_plot_<span class="dv">2</span>, <span class="st">&quot;Diff_Log&quot;</span>, <span class="dv">15</span>)
+plt_log</code></pre></div>
+<p><img src="/post/2018-06-26-london-recorded-crimes_files/figure-html/unnamed-chunk-25-1.png" width="100%" style="display: block; margin: auto;" /></p>
+<table class="table table-condensed table-hover" style="width: auto !important; margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="text-align:left;">
+Borough
+</th>
+<th style="text-align:left;">
+Ward
+</th>
+<th style="text-align:left;">
+Code
+</th>
+<th style="text-align:right;">
+2012
+</th>
+<th style="text-align:right;">
+2017
+</th>
+<th style="text-align:right;">
+Diff_Abs
+</th>
+<th style="text-align:right;">
+Ratio
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+Southwark
+</td>
+<td style="text-align:left;">
+Faraday
+</td>
+<td style="text-align:left;">
+E01003967
+</td>
+<td style="text-align:right;">
+144
+</td>
+<td style="text-align:right;">
+46
+</td>
+<td style="text-align:right;">
+-98
+</td>
+<td style="text-align:right;">
+0.3194444
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Havering
+</td>
+<td style="text-align:left;">
+Upminster
+</td>
+<td style="text-align:left;">
+E01002385
+</td>
+<td style="text-align:right;">
+82
+</td>
+<td style="text-align:right;">
+228
+</td>
+<td style="text-align:right;">
+146
+</td>
+<td style="text-align:right;">
+2.7804878
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Bexley
+</td>
+<td style="text-align:left;">
+Christchurch
+</td>
+<td style="text-align:left;">
+E01000361
+</td>
+<td style="text-align:right;">
+17
+</td>
+<td style="text-align:right;">
+48
+</td>
+<td style="text-align:right;">
+31
+</td>
+<td style="text-align:right;">
+2.8235294
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Hammersmith and Fulham
+</td>
+<td style="text-align:left;">
+Sands End
+</td>
+<td style="text-align:left;">
+E01032789
+</td>
+<td style="text-align:right;">
+29
+</td>
+<td style="text-align:right;">
+82
+</td>
+<td style="text-align:right;">
+53
+</td>
+<td style="text-align:right;">
+2.8275862
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Southwark
+</td>
+<td style="text-align:left;">
+Rotherhithe
+</td>
+<td style="text-align:left;">
+E01004033
+</td>
+<td style="text-align:right;">
+99
+</td>
+<td style="text-align:right;">
+286
+</td>
+<td style="text-align:right;">
+187
+</td>
+<td style="text-align:right;">
+2.8888889
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Lewisham
+</td>
+<td style="text-align:left;">
+New Cross
+</td>
+<td style="text-align:left;">
+E01003305
+</td>
+<td style="text-align:right;">
+63
+</td>
+<td style="text-align:right;">
+183
+</td>
+<td style="text-align:right;">
+120
+</td>
+<td style="text-align:right;">
+2.9047619
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Barnet
+</td>
+<td style="text-align:left;">
+Colindale
+</td>
+<td style="text-align:left;">
+E01000155
+</td>
+<td style="text-align:right;">
+93
+</td>
+<td style="text-align:right;">
+273
+</td>
+<td style="text-align:right;">
+180
+</td>
+<td style="text-align:right;">
+2.9354839
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Greenwich
+</td>
+<td style="text-align:left;">
+Peninsula
+</td>
+<td style="text-align:left;">
+E01033732
+</td>
+<td style="text-align:right;">
+31
+</td>
+<td style="text-align:right;">
+93
+</td>
+<td style="text-align:right;">
+62
+</td>
+<td style="text-align:right;">
+3.0000000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Barking and Dagenham
+</td>
+<td style="text-align:left;">
+Becontree
+</td>
+<td style="text-align:left;">
+E01000023
+</td>
+<td style="text-align:right;">
+140
+</td>
+<td style="text-align:right;">
+435
+</td>
+<td style="text-align:right;">
+295
+</td>
+<td style="text-align:right;">
+3.1071429
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Haringey
+</td>
+<td style="text-align:left;">
+Hornsey
+</td>
+<td style="text-align:left;">
+E01002017
+</td>
+<td style="text-align:right;">
+108
+</td>
+<td style="text-align:right;">
+343
+</td>
+<td style="text-align:right;">
+235
+</td>
+<td style="text-align:right;">
+3.1759259
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Hackney
+</td>
+<td style="text-align:left;">
+Homerton
+</td>
+<td style="text-align:left;">
+E01001735
+</td>
+<td style="text-align:right;">
+130
+</td>
+<td style="text-align:right;">
+414
+</td>
+<td style="text-align:right;">
+284
+</td>
+<td style="text-align:right;">
+3.1846154
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Sutton
+</td>
+<td style="text-align:left;">
+Belmont
+</td>
+<td style="text-align:left;">
+E01004096
+</td>
+<td style="text-align:right;">
+24
+</td>
+<td style="text-align:right;">
+77
+</td>
+<td style="text-align:right;">
+53
+</td>
+<td style="text-align:right;">
+3.2083333
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Bexley
+</td>
+<td style="text-align:left;">
+Blendon and Penhill
+</td>
+<td style="text-align:left;">
+E01000346
+</td>
+<td style="text-align:right;">
+30
+</td>
+<td style="text-align:right;">
+98
+</td>
+<td style="text-align:right;">
+68
+</td>
+<td style="text-align:right;">
+3.2666667
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Camden
+</td>
+<td style="text-align:left;">
+St Pancras and Somers Town
+</td>
+<td style="text-align:left;">
+E01000953
+</td>
+<td style="text-align:right;">
+215
+</td>
+<td style="text-align:right;">
+903
+</td>
+<td style="text-align:right;">
+688
+</td>
+<td style="text-align:right;">
+4.2000000
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Tower Hamlets
+</td>
+<td style="text-align:left;">
+Canary Wharf
+</td>
+<td style="text-align:left;">
+E01032773
+</td>
+<td style="text-align:right;">
+18
+</td>
+<td style="text-align:right;">
+112
+</td>
+<td style="text-align:right;">
+94
+</td>
+<td style="text-align:right;">
+6.2222222
+</td>
+</tr>
+</tbody>
+</table>
+<p>The difference between the two maps is quite dramatic. I am not sure which one is best, even in the context of this dataset. Both are informative by showing a different kind of changes.</p>
 </div>
