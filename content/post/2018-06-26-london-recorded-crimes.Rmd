@@ -15,7 +15,7 @@ output:
     css: "../../css/custom.css"
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include=F}
 knitr::opts_chunk$set(message = FALSE, 
                       warning = FALSE, 
                       comment = FALSE, 
