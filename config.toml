@@ -7,7 +7,7 @@ theme = "minimo"
 ignoreFiles = ["\\.Rmd$", "\\.Rmarkdown$", "_files$", "_cache$"]
 
 disqusShortname = ""
-googleAnalytics = ""
+googleAnalytics = "UA-123335260-1"
 
 Paginate = 5
 preserveTaxonomyNames = true
