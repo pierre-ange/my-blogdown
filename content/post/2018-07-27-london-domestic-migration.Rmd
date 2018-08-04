@@ -137,7 +137,8 @@ ggplot() +
                      minor_breaks = NULL,
                      labels = scales::comma) +
   labs(y = "Net Domestic Flow",
-       title= "Net Domestic Migration in and out of London - 2017")
+       title = "Net Domestic Migration in and out of London - 2017",
+       caption = "Source: ONS")
 ```
 
 Striking, isn't it? 
@@ -171,7 +172,8 @@ ggplot() +
             colour = "#2b2b2b") +
   hrbrthemes::theme_ipsum(base_size = 9, plot_title_size = 10) +
   labs(y = "Net Domestic Flow",
-       title= "Net Domestic Migration in and out of London: from 2012 to 2017")
+       title = "Net Domestic Migration in and out of London: from 2012 to 2017",
+       caption = "Source: ONS")
 ```
 
 From the plot we can see that:
