@@ -1,0 +1,185 @@
+---
+title: Domestic migration in and out London
+author: Pierre-Ange Oliva
+date: '2018-07-27'
+slug: london-migration
+comments: false
+categories: [R]
+tags: [London, R, migration]
+large_thumb: true
+draft: false
+output: 
+  blogdown::html_page:
+    dev: 'png'
+    highlight: tango
+    css: "../../css/custom.css"
+---
+
+<style type="text/css">
+div.sourceCode { overflow-x: auto; }
+table.sourceCode, tr.sourceCode, td.lineNumbers, td.sourceCode {
+  margin: 0; padding: 0; vertical-align: baseline; border: none; }
+table.sourceCode { width: 100%; line-height: 100%; background-color: #f8f8f8; }
+td.lineNumbers { text-align: right; padding-right: 4px; padding-left: 4px; color: #aaaaaa; border-right: 1px solid #aaaaaa; }
+td.sourceCode { padding-left: 5px; }
+pre, code { background-color: #f8f8f8; }
+code > span.kw { color: #204a87; font-weight: bold; } /* Keyword */
+code > span.dt { color: #204a87; } /* DataType */
+code > span.dv { color: #0000cf; } /* DecVal */
+code > span.bn { color: #0000cf; } /* BaseN */
+code > span.fl { color: #0000cf; } /* Float */
+code > span.ch { color: #4e9a06; } /* Char */
+code > span.st { color: #4e9a06; } /* String */
+code > span.co { color: #8f5902; font-style: italic; } /* Comment */
+code > span.ot { color: #8f5902; } /* Other */
+code > span.al { color: #ef2929; } /* Alert */
+code > span.fu { color: #000000; } /* Function */
+code > span.er { color: #a40000; font-weight: bold; } /* Error */
+code > span.wa { color: #8f5902; font-weight: bold; font-style: italic; } /* Warning */
+code > span.cn { color: #000000; } /* Constant */
+code > span.sc { color: #000000; } /* SpecialChar */
+code > span.vs { color: #4e9a06; } /* VerbatimString */
+code > span.ss { color: #4e9a06; } /* SpecialString */
+code > span.im { } /* Import */
+code > span.va { color: #000000; } /* Variable */
+code > span.cf { color: #204a87; font-weight: bold; } /* ControlFlow */
+code > span.op { color: #ce5c00; font-weight: bold; } /* Operator */
+code > span.pp { color: #8f5902; font-style: italic; } /* Preprocessor */
+code > span.ex { } /* Extension */
+code > span.at { color: #c4a000; } /* Attribute */
+code > span.do { color: #8f5902; font-weight: bold; font-style: italic; } /* Documentation */
+code > span.an { color: #8f5902; font-weight: bold; font-style: italic; } /* Annotation */
+code > span.cv { color: #8f5902; font-weight: bold; font-style: italic; } /* CommentVar */
+code > span.in { color: #8f5902; font-weight: bold; font-style: italic; } /* Information */
+</style>
+  <link rel="stylesheet" href="../../css/custom.css" type="text/css" />
+
+
+<p>I came across <a href="https://www.ft.com/content/965aa636-6684-3169-85ee-a2966819ce41">this article</a> in the Financial Times the other day (paywall) which I found quite interesting. Among other things, I was greatly impressed by one particular chart showing domestic migration in and out London. Fact is London population is growing at a fast pace but excluding natural increase (birth/deaths) and international migration, London population is actually in decline. In the article this trend was broken down by age, revealing that all age groups are leaving London, except from people in their 20s.</p>
+<p>The piece was written in June 2016 and used data from 2014. The dataset being openly available on the <a href="https://www.ons.gov.uk/peoplepopulationandcommunity/populationandmigration/migrationwithintheuk/datasets/internalmigrationbyoriginanddestinationlocalauthoritiessexandsingleyearofagedetailedestimatesdataset">ONS website</a>, I wanted to reproduce this chart with more up-to-date figures for 2017, to check whether the trend is still ongoing. To clarify things, the ONS has defined domestic migration figures in their dataset as residential moves between geographic areas within the UK.</p>
+<p>Let’s get started: I have downloaded and saved migration data for the years 2012 to 2017.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(tidyverse)
+
+<span class="co"># Function to read data from the directory, for a particular year</span>
+extract_data &lt;-<span class="st"> </span><span class="cf">function</span>(year){
+  year <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">    </span><span class="kw">paste0</span>(<span class="st">&quot;~/Dev/R/london-domestic-migration/domestic-migration-data/Detailed_Estimates_&quot;</span>, 
+           ., 
+           <span class="st">&quot;_Dataset_&quot;</span>, 
+           <span class="dv">1</span><span class="op">:</span><span class="dv">2</span>, 
+           <span class="st">&quot;.csv&quot;</span>) <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">    </span>purrr<span class="op">::</span><span class="kw">map_df</span>(readr<span class="op">::</span>read_csv, <span class="dt">progress =</span> <span class="ot">FALSE</span>) <span class="op">%&gt;%</span>
+<span class="st">    </span><span class="kw">mutate</span>(<span class="dt">Year =</span> year)
+}  
+
+<span class="co"># Use this function over the years</span>
+years &lt;-<span class="st"> </span><span class="dv">2012</span><span class="op">:</span><span class="dv">2017</span>
+data &lt;-<span class="st"> </span>years <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span>purrr<span class="op">::</span><span class="kw">map_df</span>(extract_data) <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">mutate_if</span>(is.character, as.factor)</code></pre></div>
+<p>I create two data frames, storing outflow and inflow data for every local authority in the file.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Create data frames of inflows and outflows per local authority</span>
+outflow &lt;-<span class="st"> </span>data <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">group_by</span>(Year, OutLA, Age) <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">summarise_at</span>(<span class="kw">vars</span>(Moves), sum) <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">mutate_at</span>(<span class="kw">vars</span>(Moves), round) <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">rename</span>(<span class="dt">Outflow =</span> Moves, <span class="dt">LA =</span> OutLA)
+
+inflow &lt;-<span class="st"> </span>data <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">group_by</span>(Year, InLA, Age) <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">summarise_at</span>(<span class="kw">vars</span>(Moves), sum) <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">mutate_at</span>(<span class="kw">vars</span>(Moves), round) <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">rename</span>(<span class="dt">Inflow =</span> Moves, <span class="dt">LA =</span> InLA)</code></pre></div>
+<p>I then proceed with a <code>full_join</code> to get net flows for every area. Note that I also expand the ages to the nearest 5, which will be useful for plotting later on (not strictly necessary).</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Data frame of net flows</span>
+age_max &lt;-<span class="st"> </span><span class="kw">max</span>(<span class="kw">c</span>(inflow<span class="op">$</span>Age, outflow<span class="op">$</span>Age))
+age_lim &lt;-<span class="st"> </span><span class="dv">5</span> <span class="op">*</span><span class="st"> </span><span class="kw">ceiling</span>(age_max<span class="op">/</span><span class="dv">5</span>) <span class="co"># rounded to the nearest 5 (useful for plotting later on)</span>
+net &lt;-<span class="st"> </span><span class="kw">full_join</span>(outflow, inflow, <span class="dt">by =</span> <span class="kw">c</span>(<span class="st">&quot;Year&quot;</span>, <span class="st">&quot;LA&quot;</span>, <span class="st">&quot;Age&quot;</span>)) <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">replace_na</span>(<span class="kw">list</span>(<span class="dt">Inflow =</span> <span class="dv">0</span>, <span class="dt">Outflow =</span> <span class="dv">0</span>)) <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">complete</span>(<span class="dt">Age =</span> <span class="dv">0</span><span class="op">:</span>age_lim, <span class="dt">fill =</span> <span class="kw">list</span>(<span class="dt">Inflow =</span> <span class="dv">0</span>, <span class="dt">Outflow =</span> <span class="dv">0</span>, <span class="dt">Net =</span> <span class="dv">0</span>)) <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Net =</span> Inflow <span class="op">-</span><span class="st"> </span>Outflow)</code></pre></div>
+<p>Data at local authority level is too granular for my purposes, hence I group every London local authority (codes starting by <code>E09</code>) into a single group.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">net_london &lt;-<span class="st"> </span>net <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">filter</span>(stringr<span class="op">::</span><span class="kw">str_detect</span>(LA, <span class="st">&quot;E09&quot;</span>)) <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">group_by</span>(Year, Age) <span class="op">%&gt;%</span><span class="st"> </span><span class="co"># We consider London as a group</span>
+<span class="st">  </span><span class="kw">summarise_at</span>(<span class="kw">vars</span>(Inflow, Outflow, Net), sum) <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">ungroup</span>()</code></pre></div>
+<p>Let’s now prepare and display the plot.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Dummy data frame to neatly position age labels on the graph: either on the right or left of the central y-axis.</span>
+age_labels &lt;-<span class="st"> </span>net_london <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">select</span>(<span class="op">-</span>Inflow, <span class="op">-</span>Outflow) <span class="op">%&gt;%</span><span class="st"> </span><span class="co"># Unnecessary data</span>
+<span class="st">  </span><span class="kw">rename</span>(<span class="dt">Pos =</span> Net) <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">filter</span>(Year <span class="op">==</span><span class="st"> </span><span class="kw">max</span>(Year) <span class="op">&amp;</span><span class="st"> </span>Age <span class="op">%in%</span><span class="st"> </span><span class="kw">seq</span>(<span class="dv">0</span>, age_lim, <span class="dt">by =</span> <span class="dv">5</span>)) <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Pos =</span> <span class="kw">case_when</span>(
+    Pos <span class="op">&gt;</span><span class="st"> </span><span class="dv">0</span> <span class="op">~</span><span class="st"> </span><span class="op">-</span><span class="dv">500</span>,
+    Pos <span class="op">&lt;=</span><span class="st"> </span><span class="dv">0</span> <span class="op">~</span><span class="st"> </span><span class="dv">500</span>
+  ))
+
+<span class="co"># Set limit on domestic flow scale: rounded to the nearest thousand up</span>
+net_lim &lt;-<span class="st"> </span><span class="fl">1e3</span> <span class="op">*</span><span class="st"> </span><span class="kw">ceiling</span>(<span class="kw">max</span>(<span class="kw">abs</span>(net_london<span class="op">$</span>Net))<span class="op">/</span><span class="fl">1e3</span>) 
+
+<span class="co"># Net domestic migration in 2017</span>
+<span class="kw">ggplot</span>() <span class="op">+</span>
+<span class="st">  </span><span class="kw">geom_col</span>(<span class="dt">data =</span> <span class="kw">filter</span>(net_london, Year <span class="op">==</span><span class="st"> </span><span class="dv">2017</span>),
+           <span class="kw">aes</span>(Age, Net, <span class="dt">colour =</span> Net<span class="op">&gt;</span><span class="dv">0</span>),
+           <span class="dt">fill =</span> <span class="st">&quot;white&quot;</span>,
+           <span class="dt">width =</span> <span class="fl">0.5</span>,
+           <span class="dt">show.legend =</span> <span class="ot">FALSE</span>) <span class="op">+</span>
+<span class="st">  </span><span class="kw">coord_flip</span>() <span class="op">+</span>
+<span class="st">  </span><span class="kw">geom_hline</span>(<span class="dt">yintercept =</span> <span class="dv">0</span>, <span class="dt">size =</span> <span class="fl">0.1</span>) <span class="op">+</span>
+<span class="st">  </span><span class="kw">geom_text</span>(<span class="dt">data =</span> age_labels, 
+            <span class="kw">aes</span>(Age, Pos, <span class="dt">label =</span> Age),
+            <span class="dt">size =</span> <span class="dv">3</span>,
+            <span class="dt">family =</span> <span class="st">&quot;Arial Narrow&quot;</span>,
+            <span class="dt">colour =</span> <span class="st">&quot;#2b2b2b&quot;</span>) <span class="op">+</span>
+<span class="st">  </span>hrbrthemes<span class="op">::</span><span class="kw">theme_ipsum</span>(<span class="dt">base_size =</span> <span class="dv">9</span>, <span class="dt">plot_title_size =</span> <span class="dv">10</span>) <span class="op">+</span>
+<span class="st">  </span><span class="kw">scale_x_continuous</span>(<span class="dt">breaks =</span> <span class="ot">NULL</span>, 
+                     <span class="dt">labels =</span> scales<span class="op">::</span>comma,
+                     <span class="dt">limits =</span> <span class="kw">c</span>(<span class="op">-</span><span class="dv">3</span>, age_lim <span class="op">+</span><span class="st"> </span><span class="dv">5</span>),
+                     <span class="dt">expand =</span> <span class="kw">c</span>(<span class="dv">0</span>,<span class="dv">0</span>)) <span class="op">+</span>
+<span class="st">  </span><span class="kw">scale_y_continuous</span>(<span class="dt">breaks =</span> <span class="kw">seq</span>(<span class="op">-</span>net_lim, net_lim, <span class="fl">2e3</span>),
+                     <span class="dt">minor_breaks =</span> <span class="ot">NULL</span>,
+                     <span class="dt">labels =</span> scales<span class="op">::</span>comma) <span class="op">+</span>
+<span class="st">  </span><span class="kw">labs</span>(<span class="dt">y =</span> <span class="st">&quot;Net Domestic Flow&quot;</span>,
+       <span class="dt">title=</span> <span class="st">&quot;Net Domestic Migration in and out of London - 2017&quot;</span>)</code></pre></div>
+<p><img src="/post/2018-07-27-london-domestic-migration_files/figure-html/unnamed-chunk-5-1.png" width="100%" style="display: block; margin: auto;" /></p>
+<p>Striking, isn’t it?</p>
+<p>If you refer to the FT article mentionned earlier, the situation has not changed much between 2014 and 2017. Students leave London to study at around 19 years old, then come back seeking jobs at around 23 years old until they reach 30. At 28 years old and beyond, more people tend to leave London. We retrieve the cyclical migration pattern mentionned in the FT.</p>
+<div id="evolution-since-2012" class="section level2">
+<h2>Evolution since 2012</h2>
+<p>Data is available since 2012, so we can look at how the situation has evolved since. I pretty much use the same lines of code, but consider all the years and use <code>geom_step</code> this time.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">ggplot</span>() <span class="op">+</span>
+<span class="st">  </span><span class="kw">geom_step</span>(<span class="dt">data =</span> net_london,
+           <span class="kw">aes</span>(Age, Net, <span class="dt">alpha =</span> Year, <span class="dt">group =</span> Year), 
+           <span class="dt">size =</span> <span class="fl">0.3</span>) <span class="op">+</span>
+<span class="st">  </span><span class="kw">coord_flip</span>() <span class="op">+</span>
+<span class="st">  </span><span class="kw">scale_x_continuous</span>(<span class="dt">breaks =</span> <span class="ot">NULL</span>, 
+                     <span class="dt">labels =</span> scales<span class="op">::</span>comma,
+                     <span class="dt">limits =</span> <span class="kw">c</span>(<span class="op">-</span><span class="dv">3</span>, age_lim <span class="op">+</span><span class="st"> </span><span class="dv">5</span>),
+                     <span class="dt">expand =</span> <span class="kw">c</span>(<span class="dv">0</span>,<span class="dv">0</span>)) <span class="op">+</span>
+<span class="st">  </span><span class="kw">scale_y_continuous</span>(<span class="dt">breaks =</span> <span class="kw">seq</span>(<span class="op">-</span>net_lim, net_lim, <span class="fl">2e3</span>),
+                     <span class="dt">minor_breaks =</span> <span class="ot">NULL</span>,
+                     <span class="dt">labels =</span> scales<span class="op">::</span>comma) <span class="op">+</span>
+<span class="st">  </span><span class="kw">geom_hline</span>(<span class="dt">yintercept =</span> <span class="dv">0</span>, <span class="dt">size =</span> <span class="fl">0.1</span>) <span class="op">+</span>
+<span class="st">  </span><span class="kw">geom_vline</span>(<span class="dt">data =</span> age_labels, <span class="kw">aes</span>(<span class="dt">xintercept =</span> Age), <span class="dt">alpha =</span> <span class="fl">0.2</span>, <span class="dt">size =</span> <span class="fl">0.1</span>) <span class="op">+</span>
+<span class="st">  </span><span class="kw">geom_text</span>(<span class="dt">data =</span> age_labels, 
+            <span class="kw">aes</span>(Age, Pos, <span class="dt">label =</span> Age),
+            <span class="dt">size =</span> <span class="dv">3</span>,
+            <span class="dt">family =</span> <span class="st">&quot;Arial Narrow&quot;</span>,
+            <span class="dt">colour =</span> <span class="st">&quot;#2b2b2b&quot;</span>) <span class="op">+</span>
+<span class="st">  </span>hrbrthemes<span class="op">::</span><span class="kw">theme_ipsum</span>(<span class="dt">base_size =</span> <span class="dv">9</span>, <span class="dt">plot_title_size =</span> <span class="dv">10</span>) <span class="op">+</span>
+<span class="st">  </span><span class="kw">labs</span>(<span class="dt">y =</span> <span class="st">&quot;Net Domestic Flow&quot;</span>,
+       <span class="dt">title=</span> <span class="st">&quot;Net Domestic Migration in and out of London: from 2012 to 2017&quot;</span>)</code></pre></div>
+<p><img src="/post/2018-07-27-london-domestic-migration_files/figure-html/unnamed-chunk-6-1.png" width="100%" style="display: block; margin: auto;" /></p>
+<p>From the plot we can see that:</p>
+<ul>
+<li>more teenagers leave London to study elsewhere than before (increasing outflow peak at 19)</li>
+<li>more and more people in their 30s and 40s leave London, a very visible trend in the plot above.</li>
+</ul>
+<p>We can’t see it quite clearly above, but in 2017 the outflow started earlier than it did in 2012: the net flow started being negative at 28 years old while 5 years earlier it only started at 29 years old: people tend to leave London younger than they used to do only 5 years ago.</p>
+</div>
+<div id="conclusion" class="section level2">
+<h2>Conclusion</h2>
+<p>The trend is there: the exodus of Londoners within the UK happens mainly among those in their thirties and forties and keep intensifying as years go by. Underlying reasons cannot be inferred from the dataset, but my guess is that lack of affordable housing combined to an ever-increasing cost of living in London and changing priorities of adults in their 30s-40s might be ones of the reasons.</p>
+<p>I haven’t looked at international migration mainly because it was not present in this dataset. However, I know that some data is also available on the ONS website. Being an international migrant myself, I might take a peek at that later on when I have more time.</p>
+</div>

@@ -1,0 +1,191 @@
+---
+title: Domestic migration in and out London
+author: Pierre-Ange Oliva
+date: '2018-07-27'
+slug: london-migration
+comments: false
+categories: [R]
+tags: [London, R, migration]
+large_thumb: true
+draft: false
+output: 
+  blogdown::html_page:
+    dev: 'png'
+    highlight: tango
+    css: "../../css/custom.css"
+---
+
+```{r setup, include=F}
+knitr::opts_chunk$set(message = FALSE, 
+                      warning = FALSE, 
+                      comment = FALSE, 
+                      cache = TRUE, 
+                      echo = TRUE, 
+                      dpi = 300,
+                      out.width = "100%",
+                      fig.width = 8,
+                      fig.height = 6,
+                      fig.align = 'center')
+
+```
+
+I came across [this article](https://www.ft.com/content/965aa636-6684-3169-85ee-a2966819ce41) in the Financial Times the other day (paywall) which I found quite interesting. 
+Among other things, I was greatly impressed by one particular chart showing domestic migration in and out London. Fact is London population is growing at a fast pace but excluding natural increase (birth/deaths) and international migration, London population is actually in decline. In the article this trend was broken down by age, revealing that all age groups are leaving London, except from people in their 20s.
+
+The piece was written in June 2016 and used data from 2014. The dataset being openly available on the [ONS website](https://www.ons.gov.uk/peoplepopulationandcommunity/populationandmigration/migrationwithintheuk/datasets/internalmigrationbyoriginanddestinationlocalauthoritiessexandsingleyearofagedetailedestimatesdataset), I wanted to reproduce this chart with more up-to-date figures for 2017, to check whether the trend is still ongoing. To clarify things, the ONS has defined domestic migration figures in their dataset as residential moves between geographic areas within the UK.
+
+
+Let's get started: I have downloaded and saved migration data for the years 2012 to 2017.
+
+```{r}
+library(tidyverse)
+
+# Function to read data from the directory, for a particular year
+extract_data <- function(year){
+  year %>% 
+    paste0("~/Dev/R/london-domestic-migration/domestic-migration-data/Detailed_Estimates_", 
+           ., 
+           "_Dataset_", 
+           1:2, 
+           ".csv") %>% 
+    purrr::map_df(readr::read_csv, progress = FALSE) %>%
+    mutate(Year = year)
+}  
+
+# Use this function over the years
+years <- 2012:2017
+data <- years %>% 
+  purrr::map_df(extract_data) %>% 
+  mutate_if(is.character, as.factor)
+```
+
+I create two data frames, storing outflow and inflow data for every local authority in the file.
+
+```{r}
+# Create data frames of inflows and outflows per local authority
+outflow <- data %>% 
+  group_by(Year, OutLA, Age) %>% 
+  summarise_at(vars(Moves), sum) %>% 
+  mutate_at(vars(Moves), round) %>% 
+  rename(Outflow = Moves, LA = OutLA)
+
+inflow <- data %>% 
+  group_by(Year, InLA, Age) %>% 
+  summarise_at(vars(Moves), sum) %>% 
+  mutate_at(vars(Moves), round) %>% 
+  rename(Inflow = Moves, LA = InLA)
+```
+
+I then proceed with a `full_join` to get net flows for every area. Note that I also expand the ages to the nearest 5, which will be useful for plotting later on (not strictly necessary).
+
+```{r}
+# Data frame of net flows
+age_max <- max(c(inflow$Age, outflow$Age))
+age_lim <- 5 * ceiling(age_max/5) # rounded to the nearest 5 (useful for plotting later on)
+net <- full_join(outflow, inflow, by = c("Year", "LA", "Age")) %>% 
+  replace_na(list(Inflow = 0, Outflow = 0)) %>% 
+  complete(Age = 0:age_lim, fill = list(Inflow = 0, Outflow = 0, Net = 0)) %>% 
+  mutate(Net = Inflow - Outflow)
+```
+
+Data at local authority level is too granular for my purposes, hence I group every London local authority (codes starting by `E09`) into a single group.
+
+```{r}
+net_london <- net %>% 
+  filter(stringr::str_detect(LA, "E09")) %>% 
+  group_by(Year, Age) %>% # We consider London as a group
+  summarise_at(vars(Inflow, Outflow, Net), sum) %>% 
+  ungroup()
+```
+
+Let's now prepare and display the plot.
+
+```{r}
+# Dummy data frame to neatly position age labels on the graph: either on the right or left of the central y-axis.
+age_labels <- net_london %>% 
+  select(-Inflow, -Outflow) %>% # Unnecessary data
+  rename(Pos = Net) %>% 
+  filter(Year == max(Year) & Age %in% seq(0, age_lim, by = 5)) %>% 
+  mutate(Pos = case_when(
+    Pos > 0 ~ -500,
+    Pos <= 0 ~ 500
+  ))
+
+# Set limit on domestic flow scale: rounded to the nearest thousand up
+net_lim <- 1e3 * ceiling(max(abs(net_london$Net))/1e3) 
+
+# Net domestic migration in 2017
+ggplot() +
+  geom_col(data = filter(net_london, Year == 2017),
+           aes(Age, Net, colour = Net>0),
+           fill = "white",
+           width = 0.5,
+           show.legend = FALSE) +
+  coord_flip() +
+  geom_hline(yintercept = 0, size = 0.1) +
+  geom_text(data = age_labels, 
+            aes(Age, Pos, label = Age),
+            size = 3,
+            family = "Arial Narrow",
+            colour = "#2b2b2b") +
+  hrbrthemes::theme_ipsum(base_size = 9, plot_title_size = 10) +
+  scale_x_continuous(breaks = NULL, 
+                     labels = scales::comma,
+                     limits = c(-3, age_lim + 5),
+                     expand = c(0,0)) +
+  scale_y_continuous(breaks = seq(-net_lim, net_lim, 2e3),
+                     minor_breaks = NULL,
+                     labels = scales::comma) +
+  labs(y = "Net Domestic Flow",
+       title= "Net Domestic Migration in and out of London - 2017")
+```
+
+Striking, isn't it? 
+
+If you refer to the FT article mentionned earlier, the situation has not changed much between 2014 and 2017. Students leave London to study at around 19 years old, then come back seeking jobs at around 23 years old until they reach 30. At 28 years old and beyond, more people tend to leave London. We retrieve the cyclical migration pattern mentionned in the FT.
+
+## Evolution since 2012
+
+Data is available since 2012, so we can look at how the situation has evolved since.
+I pretty much use the same lines of code, but consider all the years and use `geom_step` this time.
+
+```{r}
+ggplot() +
+  geom_step(data = net_london,
+           aes(Age, Net, alpha = Year, group = Year), 
+           size = 0.3) +
+  coord_flip() +
+  scale_x_continuous(breaks = NULL, 
+                     labels = scales::comma,
+                     limits = c(-3, age_lim + 5),
+                     expand = c(0,0)) +
+  scale_y_continuous(breaks = seq(-net_lim, net_lim, 2e3),
+                     minor_breaks = NULL,
+                     labels = scales::comma) +
+  geom_hline(yintercept = 0, size = 0.1) +
+  geom_vline(data = age_labels, aes(xintercept = Age), alpha = 0.2, size = 0.1) +
+  geom_text(data = age_labels, 
+            aes(Age, Pos, label = Age),
+            size = 3,
+            family = "Arial Narrow",
+            colour = "#2b2b2b") +
+  hrbrthemes::theme_ipsum(base_size = 9, plot_title_size = 10) +
+  labs(y = "Net Domestic Flow",
+       title= "Net Domestic Migration in and out of London: from 2012 to 2017")
+```
+
+From the plot we can see that:
+
+* more teenagers leave London to study elsewhere than before (increasing outflow peak at 19)
+* more and more people in their 30s and 40s leave London, a very visible trend in the plot above.
+
+We can't see it quite clearly above, but in 2017 the outflow started earlier than it did in 2012: the net flow started being negative at 28 years old while 5 years earlier it only started at 29 years old: people tend to leave London younger than they used to do only 5 years ago.
+
+## Conclusion
+The trend is there: the exodus of Londoners within the UK happens mainly among those in their thirties and forties and keep intensifying as years go by. Underlying reasons cannot be inferred from the dataset, but my guess is that lack of affordable housing combined to an ever-increasing cost of living in London and changing priorities of adults in their 30s-40s might be ones of the reasons.
+
+I haven't looked at international migration mainly because it was not present in this dataset. However, I know that some data is also available on the ONS website. Being an international migrant myself, I might take a peek at that later on when I have more time.
+
+
+
+
