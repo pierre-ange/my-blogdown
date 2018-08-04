@@ -6,7 +6,7 @@ weight: -210
 
 My name is Pierre-Ange Oliva, welcome to my blog! 
 
-I am a 27 year old chap from Lyon (France), currently based in London. In life, I enjoy the outdoors, travelling, music, and cycling. At home, I cook to relax.
+I am a 28 year old chap from Lyon (France), currently based in London. In life, I enjoy the outdoors, travelling, music, and cycling. At home, I cook to relax.
 
 My educational background is in engineering and aeronautics, but decided to work in finance instead. I am currently working at BNP Paribas as a market risk analyst.
 Work usually involves quite a bit of data crunching, statistics, mathematics - this is where I've started programming in R, and have not stopped since.

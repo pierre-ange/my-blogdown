@@ -1,7 +1,7 @@
 # About Widget config
 [about]
-title = ""                            # default: .Site.Title
-description = ""                      # default: .Site.Params.info.description
+title = "Pierre-Ange Oliva"                            # default: .Site.Title
+description = "Welcome !"                      # default: .Site.Params.info.description
 logo = "/images/logo.png"             # default: "/images/logo.png"
 
 # Recent Posts Widget config

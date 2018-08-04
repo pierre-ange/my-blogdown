@@ -1,5 +1,5 @@
 baseURL = "http://www.example.com"
-title = "Pierre-Ange Oliva"
+title = ""
 # for smart copyright line, leave this blank and check [params.copyright]
 copyright = ""
 
@@ -23,7 +23,7 @@ enableEmoji = true
 defaultContentLanguage = "en"
 
 [params.info]
-description = "Some data-driven thoughts."
+description = ""
 title404 = "Nothing's here!"
 
 [params.assets]
@@ -49,12 +49,13 @@ showReadingTime = true
 taxonomyCloudShuffle = false
 
 [params.sidebar]
-enable = false
+enable = true
 sticky = true
 
 [params.widgets]
 homepage = ["recent_posts"]
-sidebar = ["about","taxonomy_cloud"]
+sidebar = ["about"]
+
 
 [params.opengraph.facebook]
 admins = [] # array of Facebook IDs
