@@ -1,8 +1,18 @@
 ---
 title: 'Classification: Bayes and k-NN algorithms'
 author: "Pierre-Ange Oliva"
-date: "18/08/2018"
-output: html_document
+date: '2018-08-18'
+slug: bayes-knn
+comments: false
+categories: [R]
+tags: [Machine learning, R, Bayes, KNN]
+large_thumb: true
+draft: false
+output: 
+  blogdown::html_page:
+    dev: 'png'
+    highlight: tango
+    css: "../../css/custom.css"
 ---
 
 ```{r setup, include=F}
@@ -25,7 +35,7 @@ This is the part where the classification setting is introduced, Chapter 2. It i
 For real data whose underlying distribution is unknown, the Bayes classifier cannot be used and approaches exist which try to get as close to it as possible. k-NN algorithm is one of them, and the authors illustrated the point by simulating data and drawing both the k-NN and Bayes classification boundaries (Figures 2.2 and 2.5 in the book):
 
 <center>
-![](esl-knn.jpeg) ![](esl-bayes.jpeg)
+![](/images/esl-knn.jpeg) ![](/images/esl-bayes.jpeg)
 </center>
 
 ## Let's reproduce it
