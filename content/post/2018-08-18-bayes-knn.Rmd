@@ -13,6 +13,7 @@ output:
     dev: 'png'
     highlight: tango
     css: "../../css/custom.css"
+    mathjax: true
 ---
 
 ```{r setup, include=F}
