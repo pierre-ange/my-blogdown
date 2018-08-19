@@ -1,0 +1,158 @@
+---
+title: 'Classification: Bayes and k-NN algorithms'
+author: "Pierre-Ange Oliva"
+date: "18/08/2018"
+output: html_document
+---
+
+
+
+<p><a href="https://web.stanford.edu/~hastie/Papers/ESLII.pdf">The Elements of Statistical Learning</a> is an excellent book for anyone wanting to get a good grasp of some of the most frequently used machine learning algorithms. I started reading it a while ago now, and at the time there was one specific illustration in the early chapters of the book that I thought I’d like to come back to and reproduce later on.</p>
+<p>This is the part where the classification setting is introduced, Chapter 2. It is mentionned that the Bayes classifier is the one classifier that produces the lowest error rate: <span class="math display">\[ P(Y=j|X=x_0) \]</span></p>
+<p>For real data whose underlying distribution is unknown, the Bayes classifier cannot be used and approaches exist which try to get as close to it as possible. k-NN algorithm is one of them, and the authors illustrated the point by simulating data and drawing both the k-NN and Bayes classification boundaries (Figures 2.2 and 2.5 in the book):</p>
+<center>
+<img src="esl-knn.jpeg" /> <img src="esl-bayes.jpeg" />
+</center>
+<div id="lets-reproduce-it" class="section level2">
+<h2>Let’s reproduce it</h2>
+<p>The first step is to generate the data ourselves - fortunately the authors described how they did it so it is not too difficult. Note that the data and the overall look of our plots won’t be the same as in the book because all of this is random, obviously 😄.</p>
+<pre class="r"><code>library(tidyverse)
+library(hrbrthemes)
+library(MASS)
+library(mvtnorm) #multivariate gaussian density
+
+set.seed(5)
+
+# Function to draw n bivariate gaussian variables
+biv_gaussian &lt;- function(mu, sigma, n){
+  m &lt;- MASS::mvrnorm(n, mu = mu, Sigma = sigma)
+  colnames(m) &lt;- paste0(&quot;x&quot;, 1:length(mu))
+  as_tibble(m)
+}
+
+# For each class 1 and 2, create a mixture of 10 low-variance Gaussian distributions, 
+# with individual means themselves distributed as Gaussian.
+# This will be the training dataset for KNN learning algorithm
+mu &lt;- list(c(0,1), c(1,0))
+train &lt;- mu %&gt;% 
+  # Draw 10 variables from gaussian distributions N(mu_i, 1)
+  purrr::map_df(biv_gaussian, diag(2), 10, .id = &quot;class&quot;) %&gt;% 
+  dplyr::group_by(class, mean_x1 = x1, mean_x2 = x2) %&gt;%
+  # Again, draw 10 variables from gaussian distributions centered around the previous points
+  dplyr::do(biv_gaussian(c(.$mean_x1,.$mean_x2), diag(2)/5, 10))
+
+# Display these points
+x_max &lt;- ceiling(max(abs(train[,-1]))) # Maximum absolute value of x coordinates
+ggplot(data = train, aes(color = class)) +
+  geom_point(aes(x1, x2), size = .8) +
+  scale_colour_manual(values = c(&quot;1&quot; = &quot;red&quot;, &quot;2&quot; = &quot;blue&quot;)) +
+  hrbrthemes::theme_ipsum(base_size = 8, plot_title_size = 12) +
+  coord_fixed(xlim = c(-x_max,x_max), ylim = c(-x_max,x_max)) +
+  labs(title = &quot;Training set&quot;)</code></pre>
+<p><img src="/post/2018-08-18-bayes-knn_files/figure-html/unnamed-chunk-1-1.png" width="70%" style="display: block; margin: auto;" /></p>
+<div id="knn" class="section level3">
+<h3>kNN</h3>
+<p>Now let’s train a 10 nearest neighbours algorithm on this dataset to predict whether a point would belong to class 1 or class 2.</p>
+<p>A grid covering a squared area will be used as an evaluation set, whose nodes are coloured according to which class (1 or 2) the algorithm assigns them to. We also draw a path to highlight the boundary between classes 1 and 2. This will help us visualize how the kNN algorithm works.</p>
+<pre class="r"><code># Set up a mesh which will then be used as a testing set for the KNN algorithm
+n_steps &lt;- 100
+steps &lt;- seq(-x_max, x_max, length.out = n_steps)
+test &lt;- as_tibble(expand.grid(x1 = steps, x2 = steps))
+
+#---- kNN Model
+n_knn &lt;- 10 # Parameters: number of neighbours
+predict &lt;- class::knn(train[,-(1:3)], test, train$class, n_knn, prob = TRUE)
+prob &lt;- attr(predict, &quot;prob&quot;)
+prob_1 &lt;- ifelse(predict == &quot;1&quot;, prob, 1-prob) # Probability of class 1
+knn &lt;- mutate(test, Predict = predict, Prob = prob) 
+
+# kNN boundary between class1 and 2
+prob_matrix &lt;- matrix(prob_1, n_steps, n_steps)
+knn_boundary &lt;- contourLines(steps, steps, prob_matrix, levels = 0.5) %&gt;% 
+  purrr::map_df(as.tibble, .id = &quot;Path&quot;)
+
+# Display the results
+ggplot() +
+  geom_point(data = train, aes(x1, x2, color = class), size = .8) +
+  # KNN
+  geom_point(data = knn, aes(x1, x2, color = Predict), size = 0.01, alpha = 0.3) +
+  geom_path(data = knn_boundary, aes(x, y, group = Path), size = .5) +
+  hrbrthemes::theme_ipsum(base_size = 8, plot_title_size = 12) +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.title = element_blank()) +
+  scale_colour_manual(values = c(&quot;1&quot; = &quot;red&quot;, &quot;2&quot; = &quot;blue&quot;)) +
+  coord_fixed(xlim = c(-x_max,x_max), ylim = c(-x_max,x_max)) +
+  labs(title = paste0(&quot;KNN - &quot;, n_knn))</code></pre>
+<p><img src="/post/2018-08-18-bayes-knn_files/figure-html/unnamed-chunk-2-1.png" width="70%" style="display: block; margin: auto;" /></p>
+<p>We can see how most points of the training set are correctly assigned to their class, although not all points obviously, especially in the center area where it is less clear whether they belong to class 1 or 2.</p>
+<p>Actually we can calculate the training error rate: 77.5% of the training set was correctly classified by the kNN algorithm.</p>
+</div>
+<div id="bayes" class="section level3">
+<h3>Bayes</h3>
+<p>Now let’s use the same dataset and draw the Bayes boundary. It is possible to do so using:</p>
+<p><span class="math display">\[ \begin{aligned}
+P(Y = i| X) &amp;= \frac{P(X|Y=i)P(Y=i)}{P(X)} \\
+&amp;= \frac{P(X|Y=i)P(Y=i)}{P(X|Y=1)P(Y=1) + P(X|Y=0)P(Y=0)}\\
+&amp;= \frac{P(Y=1)}{P(Y=1)}\frac{P(X|Y=i)}{P(X|Y=1) + P(X|Y=0)}\\
+&amp;= \frac{P(X|Y=i)}{P(X|Y=1) + P(X|Y=0)}\\
+\end{aligned}
+\]</span></p>
+<p>It is possible to calculate each of these conditional probabilities, and so given a point we know how to obtain its probability of belonging to class 1 or 2. Considering now <span class="math display">\[ \frac{P(X|Y=1)}{P(X|Y=0)} \]</span> we can contour level 1 of this ratio and obtain the Bayes decision boundary!</p>
+<p>Converting into code:</p>
+<pre class="r"><code>#---- Bayes
+# Create a tibble of the 10 center coordinates, for each class
+means &lt;- train %&gt;% 
+  distinct(class, mean_x1, mean_x2) %&gt;% 
+  split(.$class) %&gt;% 
+  bind_cols() %&gt;% 
+  ungroup() %&gt;% 
+  dplyr::select(mean_x1_1 = mean_x1, mean_x2_1 = mean_x2,
+                mean_x1_2 = mean_x11, mean_x2_2 = mean_x21)
+
+bayes &lt;- test %&gt;% 
+  group_by_all() %&gt;% 
+  mutate(Means = list(means)) %&gt;% 
+  unnest(Means) %&gt;% 
+  rowwise() %&gt;% 
+  mutate(density_1 = mvtnorm::dmvnorm(x = c(x1,x2), mean = c(mean_x1_1,mean_x2_1), sigma = diag(2)/5)) %&gt;% 
+  mutate(density_2 = mvtnorm::dmvnorm(x = c(x1,x2), mean = c(mean_x1_2,mean_x2_2), sigma = diag(2)/5)) %&gt;% 
+  group_by(x1, x2) %&gt;% 
+  summarise_at(vars(density_1, density_2), sum) %&gt;% 
+  mutate(d_ratio = density_1/density_2)
+
+prob_matrix &lt;- matrix(bayes$d_ratio, n_steps, n_steps, byrow = TRUE)
+bayes_boundary &lt;- contourLines(steps, steps, prob_matrix, levels = 1) %&gt;% 
+  purrr::map_df(as.tibble, .id = &quot;Path&quot;)</code></pre>
+<p>Here is our Bayes classification boundary:</p>
+<pre class="r"><code>ggplot() +
+  geom_point(data = train, aes(x1, x2, color = class), size = .8) +
+  # Bayes Boundary
+  geom_path(data = bayes_boundary, aes(x, y, group = Path), size = .5) +
+  geom_point(data = bayes, aes(x1, x2, colour = d_ratio&gt;1), size = 0.01, alpha = 0.3) +
+  hrbrthemes::theme_ipsum(base_size = 8, plot_title_size = 12) +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.title = element_blank()) +
+  scale_colour_manual(values = c(&quot;1&quot; = &quot;red&quot;, &quot;2&quot; = &quot;blue&quot;, &quot;TRUE&quot; = &quot;red&quot;, &quot;FALSE&quot; = &quot;blue&quot;), guide = FALSE) +
+  coord_fixed(xlim = c(-x_max,x_max), ylim = c(-x_max,x_max)) +
+  labs(title = &quot;Bayes Boundary&quot;)</code></pre>
+<p><img src="/post/2018-08-18-bayes-knn_files/figure-html/unnamed-chunk-4-1.png" width="70%" style="display: block; margin: auto;" /></p>
+<p>And now to finish the job, drawing both the kNN and Bayes decision boundaries:</p>
+<pre class="r"><code>ggplot() +
+  geom_point(data = train, aes(x1, x2, color = class), size = .8) +
+  # Bayes Boundary
+  geom_path(data = bayes_boundary, aes(x, y, group = Path), size = .5) +
+  geom_point(data = bayes, aes(x1, x2, colour = d_ratio&gt;1), size = 0.01, alpha = 0.3) +
+  # KNN
+  geom_path(data = knn_boundary, aes(x, y, group = Path), size = .5, linetype = &quot;dashed&quot;) +
+  hrbrthemes::theme_ipsum(base_size = 8, plot_title_size = 12) +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.title = element_blank()) +
+  scale_colour_manual(values = c(&quot;1&quot; = &quot;red&quot;, &quot;2&quot; = &quot;blue&quot;, &quot;TRUE&quot; = &quot;red&quot;, &quot;FALSE&quot; = &quot;blue&quot;), guide = FALSE) +
+  coord_fixed(xlim = c(-x_max,x_max), ylim = c(-x_max,x_max)) +
+  labs(title = &quot;Bayes and 10-NN Classifiers&quot;)</code></pre>
+<p><img src="/post/2018-08-18-bayes-knn_files/figure-html/unnamed-chunk-5-1.png" width="70%" style="display: block; margin: auto;" /></p>
+</div>
+</div>
