@@ -17,7 +17,8 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(message=FALSE, warning=FALSE, comment=FALSE, 
-                      cache=TRUE, echo=TRUE, dpi=75, fig.retina=2, fig.align='center')
+                      cache=TRUE, echo=TRUE, dpi=75, fig.retina=2, 
+                      fig.align='center')
 ```
 
 ## Plan
