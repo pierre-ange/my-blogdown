@@ -136,7 +136,7 @@ P(Y = i| X) &= \frac{P(X|Y=i)P(Y=i)}{P(X)} \\
 $$
 
 It is possible to calculate each of these conditional probabilities, and so given a point we know how to obtain its probability of belonging to class 1 or 2.
-Considering now $$ \frac{P(X|Y=1)}{P(X|Y=0)} $$ we can contour level 1 of this ratio and obtain the Bayes decision boundary!
+Considering now $$ \frac{P(Y=1|X)}{P(Y=0|X)} $$ we can contour level 1 of this ratio and obtain the Bayes decision boundary!
 
 Converting into code:
 
